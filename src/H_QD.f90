@@ -45,6 +45,8 @@ if (.not.presence) then
    write (*,*) 'This file will contain all the system information.'
    write (*,*) '              Stop.'
    write (*,*) '**************************************************'
+   ! TODO: I think it is better parctice to terminate the code by hand and 
+   ! end the if statement, not use this large else block
 else
 !  write (*,*) '**************************************************'
 !  write (*,*) 'INFO:'
@@ -116,7 +118,7 @@ else
    write (*,*) ' '
    ! reading is finished
 endif
-        
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                                                     !
 !    Transform all quantities into atomic units                                                       !

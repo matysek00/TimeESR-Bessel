@@ -28,10 +28,12 @@ module declarations
   integer :: i, N, Nm, Np, i_, j, j1, j2, l
   integer :: j3, j4, i1, i2, i3, i4, u, v, i_sigma
   integer :: Electrode
+  integer :: p_max, n_max
   real (q) :: eps_QD, U_Hubbard, p_mod, stept
   real (q) :: px, py, pz, pxx, pyy, pzz, suma, gammaC
   real (q) :: Spin_polarization_R, Spin_polarization_L
   real (q) :: Temperature, gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1, Cutoff
+  real (q) :: B_L, B_R
 ! arrays
   integer, allocatable :: mol1(:), mol2(:), N_in (:), N_block (:)
   integer, allocatable :: t_seq (:), bias_time (:)
@@ -62,7 +64,7 @@ module declarations
 
 
 ! logical
-  logical ::  presence, runs, population, spindyn, redimension, density_matrix
+  logical ::  presence, runs, population, spindyn, redimension, density_matrix, use_bessel
 
 ! character
    character ( len = 100 ) :: Name_output, output_file, output_fourier, output_ESR

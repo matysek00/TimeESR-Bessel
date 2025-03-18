@@ -6,6 +6,7 @@ CONTAINS
        Freq_seq, Phase_seq, time, gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1, &
        N_int, GammaC, Cutoff, redimension, Nd, Nbias, &
        bias_R, bias_L, bias_time, Spin_polarization_R, Spin_polarization_L, Temperature, &
+       use_bessel, n_max, p_max, B_L, B_R, &
        Electrode, output_file, output_fourier, output_ESR, runs, population, density_matrix, spindyn)
    implicit none
    integer :: Ninterval, Nfreq, Ntime, n, i, Electrode, N_int
@@ -18,9 +19,11 @@ CONTAINS
    real (q) :: Spin_polarization_R, Spin_polarization_L, Temperature 
    real (q) :: gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1, Cutoff, GammaC
    real (q), allocatable :: bias_R (:), bias_L (:)
+   real (q) :: B_L, B_R
+   integer :: p_max, n_max
    real (q) :: tolerance
    real (q) :: btime_sum 
-   logical :: runs, population, spindyn, redimension, density_matrix
+   logical :: runs, population, spindyn, redimension, density_matrix, use_bessel
    integer :: Nd, Nbias
 
    tolerance = 1.e-6 !nanoseconds
@@ -104,6 +107,16 @@ CONTAINS
        read (unit_input, *) Spin_polarization_L !  between -1 and 1
        read (unit_input, *) Electrode !  0 is left and 1 is right
        read (unit_input, *)  ! separator
+
+       ! Bessel 
+       read (unit_input, *) use_bessel ! Whether to use Bessel. 
+       read (unit_input, *) B_L ! strengt of cosine bias of the Electrode
+       read (unit_input, *) B_R ! strengt of cosine bias of the Electrode
+       read (unit_input, *) p_max ! maximum number of bessel to consider
+       read (unit_input, *) n_max ! maximum number of frequencies to consider
+       read (unit_input, *)  ! separator
+       
+       ! output files
        read (unit_input, *) population ! .true. write POPULATIONS.dat
        read (unit_input, *) density_matrix ! .true. write RHO.dat
        read (unit_input, *) output_file !name of the file for the time-dependent current
@@ -135,6 +148,7 @@ CONTAINS
 
 ! Check everything is correct
 !   you need to have the same span in pulses as in time
+!TODO: should there be a single error function. 
          if (abs(t0(1)-t_initial) > tolerance) then   ! initial times must agree
               print *, ' ' 
               print *, ' ERROR: the initial time must be the same as the first interval time.'
@@ -151,16 +165,25 @@ CONTAINS
               print *, ' '
               stop
          endif
-         
-         if (Freq_seq (1,1) .eq. 0._q) then   ! must need at least a non-zero frequency for DC Current and DC Populations
-              print *, ' '
-              print *, ' ERROR: non-zero frequency needed for first frequency in order for DC current and DC Pop to be calculated.'
-              print *, ' Please change this in TimeESR.input'
-              print *, 'STOP.'
-              print *, ' '
-              stop
-         endif
-
+         if (use_bessel) then
+          print *, Nfreq, Ninterval, Nfreq == 1, Ninterval == 1, Nfreq == 1  .or. (Ninterval == 1)
+          if (Nfreq /= 1  .or. (Ninterval /= 1)) then 
+            print *, ' '
+            print *, ' ERROR: Only a single cosine pulse can be used in combination with Bessel functions'
+            print *, ' Please change them in TimeESR.input'
+            print *, 'STOP.'
+            print *, ' '
+            stop
+          endif
+          if (p_max < n_max) then
+            print *, ' '
+            print *, ' ERROR: considered p for bessel must be larger or equal to maximum n'
+            print *, ' Please change them in TimeESR.input'
+            print *, 'STOP.'
+            print *, ' '
+            stop
+          endif
+        endif
 
 ! creation of the time arrays for Runge Kutta and for pulse generation
          stept = (t_final - t_initial) / (Ntime-1)
@@ -210,7 +233,7 @@ CONTAINS
    integer :: Nfreq, Ninterval
    real (q) :: suma, sumb, weight, stept, period 
    real (q) :: time (:), curr (:), Freq_seq (:,:)
-   real (q) :: t1, t2, t3, DC_current, DC_current_test
+   real (q) :: t1, t2, t3, DC_current
    complex (qc) :: a (3,3)
    real (q), parameter :: pA = .662371573E10_q !a.u. to pA
    real (q), allocatable :: frequencies (:)
@@ -218,7 +241,6 @@ CONTAINS
    complex (qc), allocatable :: matrix_out (:), rho (:,:,:), DC_pop (:), DC_rho (:,:)
    character ( len = 100 ) :: output_file, output_fourier, output_ESR
    logical :: population, density_matrix
-   real (q) :: sumrho
 
    if (population) then ! only if tag population is set to .true.
 ! Diagonal of density matrix or populations as a function of time
@@ -231,11 +253,7 @@ CONTAINS
       open (unit_output, file='POPULATIONS.dat')
 
       do i=1,Ntime
-      sumrho = 0._q
-      do j=1, Ndim
-         sumrho = sumrho + dble(rho(j,j,i))
-      enddo
-      write(unit_output,*) time(i)*time_unit, (dble(rho(j,j,i)), j = 1, Ndim), sumrho
+      write(unit_output,*) time(i)*time_unit, (dble(rho(j,j,i)), j = 1, Ndim)
       enddo
 
       close (unit_output)
@@ -265,11 +283,11 @@ CONTAINS
    open (unit_output, file=output_file)
 
     print *, ' '
-    print *, 'Output written in ',trim(output_file),' in nanoseconds and picoAmps.'
+    print *, 'Output written in ',output_file,'in nanoseconds and picoAmps.'
     print *, 'The calculation is finished.'
     print *, ' '
     do i = 1, Ntime
-       write (unit_output,*) time(i)*time_unit, curr(i)*pA !nanoseconds, picoAmp
+       write (unit_output,*) time (i)*time_unit, curr (i)*pA !nanoseconds, picoAmp
     enddo
 
     close (unit_output)
@@ -277,7 +295,7 @@ CONTAINS
 ! Determine whether we have one or two frequencies 
 
       allocate (DC_pop (Ndim)) !DC_pop contains the "average" population
-      allocate (DC_rho (Ndim, Ntime)) !DC_rho contains the "average" diagonal density matrix elements
+      allocate (DC_rho (Ndim, Ntime)) !DC_pop contains the "average" population
       do i = 1, Ndim
         DC_rho (i,:) = 0.5* rho(i,i,:)
       enddo
@@ -286,100 +304,93 @@ CONTAINS
 
       Nfreq = size (Freq_seq(1,:))
       if (Nfreq == 2) then
-         
-         Ninterval = size (Freq_seq(:,1))
+      Ninterval = size (Freq_seq(:,1))
 
-         ! combination of two sines gives a low freq difference of two freq
+! combination of two sines gives a low freq difference of two freq
 
-         period =2._q*pi_d/abs(Freq_seq (Ninterval,1)-Freq_seq (Ninterval,2))
-         stept = (time(2)-time(1))
-         indexperiod = int(period/stept)
+      period =2._q*pi_d/abs(Freq_seq (Ninterval,1)-Freq_seq (Ninterval,2))
+      stept = (time(2)-time(1))
+      indexperiod = int(period/stept)
 
-         ! Compute DC current as the mean of the integral over a number of periods
-         ! take 20 periods from the last point in time (Ntime)
-         ! we have to be careful to have reached the long-time regime
-         ! and we have to be careful to have enough points so as to minimize
-         ! mismatch in frequencies and integrate as many oscillations as possible
-         p=20
+! Compute DC current as the mean of the integral over a number of periods
+! take 20 periods from the last point in time (Ntime)
+! we have to be careful to have reached the long-time regime
+! and we have to be careful to have enough points so as to minimize
+! mismatch in frequencies and integrate as many oscillations as possible
+      p=20
 
-         if (p*indexperiod > int(Ntime*0.3)) then
-            print *, ' '
-            print *, 'WARNING: the integration time to get the DC current '
-            print *, 'is bigger than one third of the total time'
-            print *, 'the populations are probably not stable yet!'
-            print *, 'EITHER: go into io.f90 and reduce p'
-            print *, 'OR: increase Ntime'
-            print *, ' '
-         endif
+        if (p*indexperiod > int(Ntime*0.3)) then
+             print *, ' '
+             print *, 'WARNING: the integration time to get the DC current '
+             print *, 'is bigger than one third of the total time'
+             print *, 'the populations are probably not stable yet!'
+             print *, 'EITHER: go into io.f90 and reduce p'
+             print *, 'OR: increase Ntime'
+             print *, ' '
+        endif
 
-         DC_current = 0.5* curr(Ntime-p*indexperiod)
-         DC_pop (:) = 0.5* DC_rho(:,Ntime-p*indexperiod)
+        DC_current = 0.5* curr(Ntime-p*indexperiod)
+        DC_pop (:) = 0.5* DC_rho(:,Ntime-p*indexperiod)
         
-         do i = Ntime-p*indexperiod+1, Ntime-1
-            DC_current = DC_current + curr(i)
-            DC_pop (:) = DC_pop (:) + DC_rho (:,i)
-         enddo
-         DC_current = DC_current + 0.5* curr(Ntime)
-         DC_pop (:) = DC_pop (:) + 0.5* DC_rho (:,Ntime)
+      do i = Ntime-p*indexperiod+1, Ntime-1
+        DC_current = DC_current + curr(i)
+        DC_pop (:) = DC_pop (:) + DC_rho (:,i)
+      enddo
+        DC_current = DC_current + 0.5* curr(Ntime)
+        DC_pop (:) = DC_pop (:) + 0.5* DC_rho (:,Ntime)
 
-         ! mean value
-         DC_current = DC_current / (p*indexperiod)
-         DC_pop (:) = DC_pop (:) / (p*indexperiod)  
+! mean value
+      DC_current = DC_current / (p*indexperiod)
+      DC_pop (:) = DC_pop (:) / (p*indexperiod)  
       
+
       else ! I assume one only freq. Probably no sense for more than two Freq
-      
-         ! Starting frequency of zero doesn't work here, so make sure that we catch this in the input
-         period =2._q*pi_d/Freq_seq (1,1)
-         stept = (time(2)-time(1))
-         indexperiod = int(period/stept)
 
-         ! take five periods, this is hardwired and can
-         ! have consequence if the driving is not sinusoidal
-         ! or the period is to long (when doing DC calculations...)
-         ! Comment out just the max-min for sinusoidal currents
-         !     open (unit_output, file='dc_current_test.dat')
-         !     p=5
-         !     l=0
-         !     allocate (array (p*indexperiod+1))
-         !     array = 0
-         !     do i = Ntime-p*indexperiod, Ntime
-         !        l = l+1
-         !        array (l) = curr (i)
-         !     enddo
-         !     DC_current= 0.5*(MAXVAL(array)+MINVAL(array))
-         !     deallocate (array)
-         !     write (unit_output, *) DC_current_test*pA !picoAmp units
-         !     close (unit_output)
-         
-         ! INSTEAD
-         ! We apply general averaging over p periods
-         p=20
+      period =2._q*pi_d/Freq_seq (1,1)
+      stept = (time(2)-time(1))
+      indexperiod = int(period/stept)
 
-         if (p*indexperiod > int(Ntime*0.3)) then
-            print *, ' '
-            print *, 'WARNING: the integration time to get the DC current '
-            print *, 'is bigger than one third of the total time'
-            print *, 'the populations are probably not stable yet!'
-            print *, 'EITHER: go into io.f90 and reduce p'
-            print *, 'OR: increase Ntime.'
-            print *, ' '
-         endif
-         
-         ! Integration follows:
-         DC_current = 0.5* curr(Ntime-p*indexperiod)
-         DC_pop (:) = 0.5* DC_rho(:,Ntime-p*indexperiod)
+! take five periods, this is hardwired and can
+! have consequence if the driving is not sinusoidal
+! or the period is to long (when doing DC calculations...)
+! Comment out just the max-min for sinusoidal currents
+!     p=5
+!     l=0
+!     allocate (array (p*indexperiod+1))
+!     array = 0
+!     do i = Ntime-p*indexperiod, Ntime
+!        l = l+1
+!        array (l) = curr (i)
+!     enddo
+!     DC_current= 0.5*(MAXVAL(array)+MINVAL(array))
+!     deallocate (array)
+!
+! INSTEAD
+! We apply general averaging over p periods
+      p=20
+
+        if (p*indexperiod > int(Ntime*0.3)) then
+             print *, ' '
+             print *, 'WARNING: the integration time to get the DC current '
+             print *, 'is bigger than one third of the total time'
+             print *, 'the populations are probably not stable yet!'
+             print *, 'EITHER: go into io.f90 and reduce p'
+             print *, 'OR: increase Ntime.'
+             print *, ' '
+        endif
+! Integration follows:
+        DC_current = 0.5* curr(Ntime-p*indexperiod)
+        DC_pop (:) = 0.5* DC_rho(:,Ntime-p*indexperiod)
         
-         do i = Ntime-p*indexperiod+1, Ntime-1
-            DC_current = DC_current + curr(i)
-            DC_pop (:) = DC_pop (:) + DC_rho (:,i)
-         enddo
-        
-         DC_current = DC_current + 0.5* curr(Ntime)
-         DC_pop (:) = DC_pop (:) + 0.5* DC_rho (:,Ntime)
-         
-         ! mean value
-         DC_current = DC_current / (p*indexperiod)
-         DC_pop (:) = DC_pop (:) / (p*indexperiod) 
+      do i = Ntime-p*indexperiod+1, Ntime-1
+        DC_current = DC_current + curr(i)
+        DC_pop (:) = DC_pop (:) + DC_rho (:,i)
+      enddo
+        DC_current = DC_current + 0.5* curr(Ntime)
+        DC_pop (:) = DC_pop (:) + 0.5* DC_rho (:,Ntime)
+! mean value
+      DC_current = DC_current / (p*indexperiod)
+      DC_pop (:) = DC_pop (:) / (p*indexperiod) 
 
       endif !close if on number of frequencies
 
@@ -395,16 +406,16 @@ CONTAINS
          print *, ' '
       endif
 
-   open (unit_output, file=output_ESR)
+  open (unit_output, file=output_ESR)
 
-   write (unit_output, *) DC_current*pA !picoAmp units
+      write (unit_output, *) DC_current*pA !picoAmp units
 
-   close (unit_output)
-   open (unit_output, file='POP_AVE.dat')
+  close (unit_output)
+  open (unit_output, file='POP_AVE.dat')
 
-   write (unit_output, *) (real(DC_pop (i)), i=1,Ndim) ! occupation units
+      write (unit_output, *) (real(DC_pop (i)), i=1,Ndim) !picoAmp units
 
-   close (unit_output)
+  close (unit_output)
 
    return
    end subroutine writing_output 

@@ -5,10 +5,10 @@ program TimeESR
 ! Phys. Rev. B Physical Review B 104 (24), 245435 (2021)
 
 !
-! gnu licence 3.0 (c) J. Reina Galvez, E. D. Switzer, C. Wolf & N. Lorente
+! gnu licence 3.0 (c) J. Reina Galvez & N. Lorente
 !
-!  Release version 1.0.1
-!  2023 October 7
+!  Release version 1.0.0
+!  2023 February 24
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !This is the main file and calls in:
@@ -38,6 +38,7 @@ implicit none
        Freq_seq, Phase_seq, time, gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1, &
        N_int, GammaC, Cutoff, redimension, Nd, Nbias, &
        bias_R, bias_L, bias_time, Spin_polarization_R, Spin_polarization_L, Temperature, &
+       use_bessel, n_max, p_max, B_L, B_R, &
        Electrode, output_file, output_fourier, output_ESR, runs, population, density_matrix, spindyn)
      call clock ('Finished reading INPUT for the QME ', 2)
 
@@ -92,12 +93,24 @@ implicit none
      call clock ('Finished Runge Kutta solver ', 2)
         
      call clock ('STEP 4:: Electronic current ', 1)
-      call Current (Ndim, Ntime, rho, NFreq, Nbias, bias_time, &
-         lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, &
-         Spin_polarization_R, Spin_polarization_L,  &
-         t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
-         fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-         Temperature, Electrode, curr)
+     
+     if (use_bessel) then
+          call Current_bessel (Ndim, Ntime, rho, NFreq, Nbias, bias_time, &
+               lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, &
+               Spin_polarization_R, Spin_polarization_L,  &
+               t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
+               fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
+               n_max, p_max, B_L, B_R,  &
+               Temperature, Electrode, curr)
+     else
+          call Current (Ndim, Ntime, rho, NFreq, Nbias, bias_time, &
+               lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, &
+               Spin_polarization_R, Spin_polarization_L,  &
+               t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
+               fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
+               Temperature, Electrode, curr)
+     endif
+
      call clock ('Finished electronic current ', 2)
 
       if (spindyn) then

@@ -39,17 +39,17 @@ CONTAINS
       
 ! Right electrode
       
-      g0p_up = gamma_R_0*fermiR*(1._q+Spin_polarization_R)*0.5_q
-      g0m_up = gamma_R_0*ufermiR*(1._q+Spin_polarization_R)*0.5_q
-      g0p_dn = gamma_R_0*fermiR*(1._q-Spin_polarization_R)*0.5_q
-      g0m_dn = gamma_R_0*ufermiR*(1._q-Spin_polarization_R)*0.5_q
+      g0p_up = gamma_R_0*fermiR*(1+Spin_polarization_R)*0.5
+      g0m_up = gamma_R_0*ufermiR*(1+Spin_polarization_R)*0.5
+      g0p_dn = gamma_R_0*fermiR*(1-Spin_polarization_R)*0.5
+      g0m_dn = gamma_R_0*ufermiR*(1-Spin_polarization_R)*0.5
 
 ! Left electrode
 
-      g1p_up = gamma_L_0*fermiL*(1._q+Spin_polarization_L)*0.5_q
-      g1m_up = gamma_L_0*ufermiL*(1._q+Spin_polarization_L)*0.5_q
-      g1p_dn = gamma_L_0*fermiL*(1._q-Spin_polarization_L)*0.5_q
-      g1m_dn = gamma_L_0*ufermiL*(1._q-Spin_polarization_L)*0.5_q
+      g1p_up = gamma_L_0*fermiL*(1+Spin_polarization_L)*0.5
+      g1m_up = gamma_L_0*ufermiL*(1+Spin_polarization_L)*0.5
+      g1p_dn = gamma_L_0*fermiL*(1-Spin_polarization_L)*0.5
+      g1m_dn = gamma_L_0*ufermiL*(1-Spin_polarization_L)*0.5
 
 
         do v=1,Ndim
@@ -60,7 +60,7 @@ CONTAINS
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g0m_dn
 
 ! Right electrode
-            G (v,l,j,u,1,n) = 0.5_q*(Lvluj + Ljulv)
+            G (v,l,j,u,1,n) = 0.5*(Lvluj + Ljulv)
 
             Lvluj = lambda (v,l,1)*conjg(lambda(u,j,1))*g1p_up+  &
                     lambda (v,l,2)*conjg(lambda(u,j,2))*g1p_dn
@@ -68,7 +68,7 @@ CONTAINS
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g1m_dn
 
 ! Left electrode
-            G (v,l,j,u,2,n) = 0.5_q*(Lvluj + Ljulv)
+            G (v,l,j,u,2,n) = 0.5*(Lvluj + Ljulv)
             
             !if(write_rates) write(666,*) v, l, j, u, n, G(v,l,j,u,1,n)*Hartree/GHz, G(v,l,j,u,2,n)*Hartree/GHz
         enddo
@@ -83,9 +83,10 @@ CONTAINS
 !
 ! For the Current NOW
 !
-     subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         Temperature, Electrode,  GC)
+
+subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
+     Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
+     Temperature, Electrode,  GC)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculation of the QME rates
 ! time dependent
@@ -110,7 +111,7 @@ CONTAINS
      complex (qc) :: Lvluja, Ljulva
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-            
+          
      do n =1,Nbias
      do j=1,Ndim
      do u=1,Ndim
@@ -120,54 +121,178 @@ CONTAINS
 ! but it slows down the code (only two evaluation per pair u,j )
 
 
-      fermiR = fermiR_a(j,u,n)
-      fermiL = fermiL_a(j,u,n)
-      ufermiR = ufermiR_a(j,u,n)
-      ufermiL = ufermiL_a(j,u,n)
-      
+     fermiR = fermiR_a(j,u,n)
+     fermiL = fermiL_a(j,u,n)
+     ufermiR = ufermiR_a(j,u,n)
+     ufermiL = ufermiL_a(j,u,n)
+     
 
 !Right electrode
-      g0pa_up = Electrode*gamma_R_0*fermiR*(1._q+Spin_polarization_R)*0.5_q
-      g0ma_up = Electrode*gamma_R_0*ufermiR*(1._q+Spin_polarization_R)*0.5_q
-      g0pa_dn = Electrode*gamma_R_0*fermiR*(1._q-Spin_polarization_R)*0.5_q
-      g0ma_dn = Electrode*gamma_R_0*ufermiR*(1._q-Spin_polarization_R)*0.5_q
+     g0pa_up = Electrode*gamma_R_0*fermiR*(1+Spin_polarization_R)*0.5
+     g0ma_up = Electrode*gamma_R_0*ufermiR*(1+Spin_polarization_R)*0.5
+     g0pa_dn = Electrode*gamma_R_0*fermiR*(1-Spin_polarization_R)*0.5
+     g0ma_dn = Electrode*gamma_R_0*ufermiR*(1-Spin_polarization_R)*0.5
 
 ! Left electrode
-     g1pa_up = (1-Electrode)*gamma_L_0*fermiL*(1._q+Spin_polarization_L)*0.5_q
-     g1ma_up = (1-Electrode)*gamma_L_0*ufermiL*(1._q+Spin_polarization_L)*0.5_q
-     g1pa_dn = (1-Electrode)*gamma_L_0*fermiL*(1._q-Spin_polarization_L)*0.5_q
-     g1ma_dn = (1-Electrode)*gamma_L_0*ufermiL*(1._q-Spin_polarization_L)*0.5_q
+     g1pa_up = (1-Electrode)*gamma_L_0*fermiL*(1+Spin_polarization_L)*0.5
+     g1ma_up = (1-Electrode)*gamma_L_0*ufermiL*(1+Spin_polarization_L)*0.5
+     g1pa_dn = (1-Electrode)*gamma_L_0*fermiL*(1-Spin_polarization_L)*0.5
+     g1ma_dn = (1-Electrode)*gamma_L_0*ufermiL*(1-Spin_polarization_L)*0.5
 
-        do v=1,Ndim
-        do l=1,Ndim
+     do v=1,Ndim
+     do l=1,Ndim
 
 !Right electrode
-            Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+  &
+          Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+  &
                     lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
-            Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g0ma_up+  &
+          Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g0ma_up+  &
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g0ma_dn
 
-            GC (v,l,j,u,n) = 0.5_q*(Lvluja - Ljulva)
+          GC (v,l,j,u,n) = 0.5*(Lvluja - Ljulva)
 
 ! Left electrode
-            Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
+          Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
                     lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
-            Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g1ma_up+  &
+          Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g1ma_up+  &
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g1ma_dn
-              
-              
-            GC (v,l,j,u,n) = GC (v,l,j,u,n) + 0.5_q*(Lvluja - Ljulva) ! This has the right admixture of electrodes
+          
+          
+          GC (v,l,j,u,n) = GC (v,l,j,u,n) + 0.5*(Lvluja - Ljulva) ! This has the right admixture of electrodes
 
 
-        enddo
-        enddo
-      enddo
+     enddo
+     enddo
+     enddo
+     enddo
+     enddo
+     
+     return
+ 
+      end subroutine ratesC 
+
+     subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
+         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
+         p_max, B_L, B_R, Amplitude1, frequency1, &
+         Temperature, Electrode,  GC)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! calculation of the QME rates
+! time dependent
+! for pulses that are either steps or cosine or a sequence of both
+     implicit none
+! Input:
+     complex (qc), intent (in):: lambda (:,:,:)
+     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency1, Amplitude1
+     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
+     integer :: Ndim, NFreq, Nbias, p_max
+     integer :: Electrode
+! Output: the Rates called GC (:,:,:,:,:) here
+     complex (qc) :: GC (:,:,:,:,:) ! for current
+! Computed in ExtendedFermiIntegral
+     complex (qc) :: fR, ufR, fL, ufL
+     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
+     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
+! Only used in this subroutine
+     integer :: v, l, j, u, n, i, m, p
+     complex (qc) :: fermiRB(2*p_max-2*n_max), fermiLB(2*p_max-2*n_max)
+     complex (qc) :: ufermiRB(2*p_max-2*n_max), ufermiLB(2*p_max-2*n_max)
+     real (q), dimension(2*p_max+1) :: J_L, J_R
+     real (q), dimension(2*p_max-1) :: K_L, K_R
+     complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
+     complex (qc) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
+     complex (qc) :: bessel_contributionR, ubessel_contributionR
+     complex (qc) :: bessel_contributionL, ubessel_contributionL
+     
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!    Calculate Contribution of Bessel functions
+    
+     print *, p_max, B_L, B_R, frequency1
+     
+     ! TODO: check the generalization to multiple frequencies. 
+     ! this should be one function called for L and R seperately
+     ! calculate positive bessels
+     J_L = Bessel_JN(-p_max, p_max, B_L/frequency1)
+     J_R = Bessel_JN(-p_max, p_max, B_R/frequency1)
+     
+     print *, J_L
+     print *, J_R 
+
+     ! K(p) = J(p) + A/2*(J(p-1)+ J(p+1))
+     K_L = J_L(2:2*p_max) + 0.5 * Amplitude1 * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
+     K_R = J_R(2:2*p_max) + 0.5 * Amplitude1 * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
+     
+     print *, K_L
+     print *, K_R
+
+     ! TODO:   Define general fermi function
+     g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
+     g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
+     g1pa_up = 0.5 * (1-Electrode) * gamma_L_0 * (1+Spin_polarization_L)
+     g1pa_dn = 0.5 * (1-Electrode) * gamma_L_0 * (1-Spin_polarization_L)
+
+     do j=1,Ndim
+     do u=1,Ndim
+
+          !Right electrode
+          LvlujaR = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+ &
+               lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
+          LjulvaR = lambda (j,u,1)*conjg(lambda(l,v,1))*g0pa_up+  &
+               lambda (j,u,2)*conjg(lambda(l,v,2))*g0pa_dn
+          
+          ! Left electrode
+          LvlujaL = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
+               lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
+          LjulvaL = lambda (j,u,1)*conjg(lambda(l,v,1))*g1pa_up+  &
+               lambda (j,u,2)*conjg(lambda(l,v,2))*g1pa_dn
+          
+          ! TODO: declare these
+          ! precalculate fermi energies
+          do p = -p_max+n_max, p_max-n_max
+               call ExtendedFermiIntegral ( Delta(j,u)-p*frequency1, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendedFermiIntegral ( Delta(u,j)-p*frequency1, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+               call ExtendedFermiIntegral ( Delta(j,u)-p*frequency1, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendedFermiIntegral ( Delta(u,j)-p*frequency1, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+               
+               fermiRB(p) = fR  / pi_d
+               ufermiRB(p) = ufR / pi_d
+               fermiLB(p)  = fL  / pi_d
+               ufermiLB(p) = ufL / pi_d
+          enddo
+
+          do n =1,n_max
+
+               ! contribution of bessel functions
+               bessel_contributionR  = 0 
+               bessel_contributionL  = 0 
+               ubessel_contributionR = 0 
+               ubessel_contributionL = 0 
+
+               do p = -p_max+n_max, p_max-n_max
+                    bessel_contributionR  = bessel_contributionR  + K_R(p) * K_R(p-n) * fermiRB(p)
+                    ubessel_contributionR = ubessel_contributionR + K_R(p) * K_R(p+n) * ufermiRB(p)     
+                    bessel_contributionL  = bessel_contributionL  + K_L(p) * K_L(p-n) * fermiLB(p)
+                    ubessel_contributionL = ubessel_contributionL + K_L(p) * K_L(p+n) * ufermiLB(p)
+               enddo
+
+               GC (v,l,j,u,n) = 0.5 * LvlujaR * bessel_contributionR - LjulvaR * ubessel_contributionR
+               GC (v,l,j,u,n) = 0.5 * LvlujaL * bessel_contributionL - LjulvaL * ubessel_contributionL
+     
+          enddo
+
+          ! add (1+Acos(wt))^2
+          GC (v,l,j,u,0)  = GC (v,l,j,u,0)  + 0.5  * (LjulvaL + LjulvaR) * (1.+0.25*Amplitude1**2)
+          GC (v,l,j,u,-1) = GC (v,l,j,u,-1) + 0.5  * (LjulvaL + LjulvaR) * Amplitude1
+          GC (v,l,j,u,1)  = GC (v,l,j,u,1)  + 0.5  * (LjulvaL + LjulvaR) * Amplitude1
+          GC (v,l,j,u,-2) = GC (v,l,j,u,-2) + 0.25 * (LjulvaL + LjulvaR) * Amplitude1**2
+          GC (v,l,j,u,2)  = GC (v,l,j,u,2)  + 0.25 * (LjulvaL + LjulvaR) * Amplitude1**2
+
      enddo
      enddo
          
      return
 
-     end subroutine ratesC 
+     end subroutine ratesC_bessel 
 !
 ! initial population for the propagation
 !
@@ -177,71 +302,30 @@ CONTAINS
      real (q), intent (in) :: Temperature
      real (q), intent (in) :: Eigenvalues (:)
      complex (qc), allocatable, intent (out) :: rho (:,:,:)
-     real (q) :: Z, expval, maxarg, ln_val, sum_exp
-     real (q), allocatable :: arg(:)
+     real (q) :: Z
      integer :: i
-     logical, allocatable :: truncate_flag(:)
-     logical :: report_truncate
-
-     ! Overflow and underflow errors are common in calculation of partition functions
-     ! so we utilize a log sum exp (LSE) trick which is commonly used in data science
 
      allocate (rho (Ndim, Ndim, Ntime))
-     allocate(arg(size(Eigenvalues)))
-     allocate(truncate_flag(size(Eigenvalues)))
-     
-     Z = 0._q; rho = zero;
-     truncate_flag = .FALSE.
-     report_truncate = .FALSE.
-     arg = 0._q
-   
-     ! LSE: Get exponential arguments
-     do i=1, Ndim 
-      arg(i) = -(Eigenvalues(i)-Eigenvalues(1))/Temperature 
 
-        ! Checking for underflow errors
-        if ( arg(i) < log(tiny(1.0_q)) ) then
-          truncate_flag(i) = .TRUE.
-          report_truncate = .TRUE.
-        end if
-     end do
-     
-     if(report_truncate) then
-      
-       write(*,*) "Large negative exponential argument(s) found for initial population calculation"
-       write(*,*) "The exponent of this argument will be truncated to zero"
-       write(*,*) "(state number, eigenvalue, temperature, exp argument, &
-          & and largest negative exponent argument allowed):"
-       do i=1, Ndim
-         if (truncate_flag(i)) then
-            write(*,*) i, Eigenvalues(i)-Eigenvalues(1), Temperature, arg(i), log(tiny(1.0_q))
-         end if
-       end do
-       
-     end if
+     Z = 0._q; rho = zero
 
-     ! LSE: Find maximum value
-     maxarg = maxval(arg)
-     
-     ! LSE: Sum up all exponentials
-     sum_exp = 0._q 
      do i =1, Ndim
-      if ( arg(i) .ge. log(tiny(1.0_q))) then
-         sum_exp = sum_exp + exp(arg(i) - maxarg)
-      end if
-     end do
      
-     ! LSE: Log that sum, and add back the maximum amount that was removed
-     ln_val = maxarg + log(sum_exp)
      
-     ! Get Z from LSE
-     Z = exp(ln_val)
+#ifdef __UNDERANDOVER
+     ! Underflow errors possible here
+     if (abs(exp( - (Eigenvalues (i)-Eigenvalues (1))/Temperature )) < tiny(0.0_q)) then
+       write(*,*) "Tiny values found for eigenvalue diff (integer, value): ", i, Eigenvalues (i)-Eigenvalues (1)
+       write(*,*) "Temperature: ",Temperature
+       write(*,*) "Value: ", exp( - (Eigenvalues (i)-Eigenvalues (1))/Temperature )
+     end if
+#endif
+     Z = Z + exp ( - (Eigenvalues (i)-Eigenvalues (1))/Temperature )
+     enddo
 
-     ! Now do the populations
+
      do i = 1, Ndim
-      if ( arg(i) .ge. log(tiny(1.0_q)) ) then
-         rho (i,i,1) = rho (i,i,1) + exp ( arg(i) )/Z
-      end if
+     rho (i,i,1) = rho (i,i,1) + exp ( - (Eigenvalues (i)-Eigenvalues (1))/Temperature )/Z
      enddo
 
 !      write(*,*) Temperature, Z,Eigenvalues
@@ -251,8 +335,6 @@ CONTAINS
 !         write(*,*) (rho(i,j,1),j=1,ndim)
 !         write(*,*)  
 !      enddo
-
-     deallocate(arg)
      
      return
 
@@ -296,7 +378,6 @@ CONTAINS
      integer :: n, l, j, i, u, v, m, nb
      real (q) :: half
      complex (qc), allocatable :: k1(:), k2(:), k3(:), k4(:), D(:), P(:)
-     logical :: print_flag
 
       
      allocate (k1(Ndim*Ndim), k2(Ndim*Ndim), k3(Ndim*Ndim), k4(Ndim*Ndim))
@@ -309,15 +390,15 @@ CONTAINS
      allocate (ufermiL_a(Ndim,Ndim,Nbias))
 
 ! Bias intergal
-     print_flag = .TRUE.
      do n = 1, Nbias
 ! I11 and I21 from the Manual are honored here:
      do j=1,Ndim
      do u=1,Ndim
-      call ExtendedFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, fermiR, n, j, u, 'R', print_flag )
-      call ExtendedFermiIntegral ( Delta (j,u), bias_L (n), Temperature, Cutoff, GammaC, N_int,  fermiL, n, j, u, 'L', print_flag )
-      call ExtendeduFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, ufermiR)
+      call ExtendedFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, fermiR)
+      call ExtendedFermiIntegral ( Delta (j,u), bias_L (n), Temperature, Cutoff, GammaC, N_int,  fermiL)
+      call ExtendeduFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, ufermiR) 
       call ExtendeduFermiIntegral ( Delta (j,u), bias_L (n), Temperature, Cutoff, GammaC, N_int,  ufermiL)
+      ! what is the difference between 1st and 3rd and 2nd and 4th row other than output?
 !The idea is to create an array and pass it to the rates routine
       fermiR_a(j,u,n) = fermiR  / pi_d !important pi factor, see Manual
       fermiL_a(j,u,n) = fermiL  / pi_d
@@ -334,6 +415,7 @@ CONTAINS
 
 ! loop on time
       call clock ('Entering time loop in RK after computing static rates', 2)
+! Matyas: Name loops 
        do i = 1, Ntime-1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -381,7 +463,7 @@ CONTAINS
        call matrix_rate (D, G, Delta, P, half)
        k1 = stept*P
 
-       D = D + 0.5_q*k1
+       D = D + 0.5*k1
        half = 0.5_q
        call matrix_rate (D, G, Delta, P, half)
        k2 = stept*P
@@ -394,7 +476,7 @@ CONTAINS
        enddo
        enddo
 
-       D = D + 0.5_q*k2
+       D = D + 0.5*k2
        half = 0.5_q
        call matrix_rate (D, G, Delta, P, half)
        k3 = stept*P
@@ -522,83 +604,52 @@ CONTAINS
       
       beta = 1._q / T
       Fermi = beta * e
-      
-      ! Take care of underflow and overflow errors here, which can occur within some distance from tiny and huge
-      if(Fermi-4._q .lt. log(tiny(1._q))) then
-#ifdef __DEBUG
-         write(*,*) "Large negative beta*energy value found"
-         write(*,*) "(beta, energy, beta*energy, largest negative value allowed):"
-         write(*,*) beta, e, Fermi, log(tiny(1._q))
-         write(*,*) "Fermi function will default to the value of 1"
-#endif
-         Fermi = 1._q
-      elseif (Fermi+4._q .gt. log(huge(1._q))) then
-#ifdef __DEBUG
-         write(*,*) "Large positive beta*energy value found"
-         write(*,*) "(beta, energy, beta*energy, largest positive value allowed):"
-         write(*,*) beta, e, Fermi, log(huge(1._q))
-         write(*,*) "Fermi function will default to the value of 0"
-#endif
-         Fermi = 0._q
+      if (e < -1000._q) then
+      	Fermi = 0._q
       else
-         Fermi = 1._q/(1._q + exp(Fermi))
+#ifdef __UNDERANDOVER
+     ! Overflow errors possible here
+     if (exp(Fermi) > huge(0.0_q)) then
+       write(*,*) "Large Fermi value found for energy, temperature, value: ",e,T,exp(Fermi)
+     end if
+#endif
+        Fermi = exp(Fermi)
       end if
       
+! Matyas: can't find a definition of lowecase fermi 
+      if (fermi > 1.0e30_q) then
+        Fermi = 0._q
+      else
+        Fermi = 1._q/(1._q + Fermi)
+      end if
     end function
 
 
 ! Calculation of energy integration of rates involving the Fermi function
-      subroutine ExtendedFermiIntegral ( D, V, T, Cutoff, GammaC, N,  fermiA, i_n, i_j, i_u, bias_dir, print_flag )
+      subroutine ExtendedFermiIntegral ( D, V, T, Cutoff, GammaC, N,  fermiA)
       implicit none
       real (q) :: D, V, T, Cutoff, GammaC
       real (q) :: e, step_e
       integer :: i, N
       complex (qc):: fermiA
-      logical :: truncate_flag
-      integer :: i_n, i_j, i_u
-      character(len=*) :: bias_dir
-      logical :: print_flag
 !fermiA is Integral I11 of the Manual
 ! Trapeze-integration (the best among the better)
 
-      step_e = 2._q*Cutoff/(N-1._q)
-      e = -Cutoff
-      fermiA = 0.5_q*Fermi(e-V,T) / (e - D + ui*GammaC)
-      truncate_flag = .FALSE.
+      step_e = 2*Cutoff/(N-1)
+      e= -Cutoff
+      fermiA=0.5*Fermi (e-V, T) / (e-D+ui*GammaC)
       
       do i = 2, N-1
-         e= -Cutoff + (i-1._q)*step_e       
-         
-         ! Found an issue with dividing a small e-D quantity into a very small Fermi
-         ! By including GammaC, Fortran performs a multiplication of the numerator by
-         ! (e-D,-GammaC) and the denominator becomes |(e-D,GammaC)|^2. The first step
-         ! may underflow the real register, and so we handle it the best we can.
-         if(Fermi(e-V,T) .ne. 0._q) then
-            if((log(Fermi(e-V,T)) + log(abs(e-D)))-6._q .ge. log(tiny(1._q))) then
-               fermiA = fermiA + Fermi(e-V,T) / (e - D + ui*GammaC)
-            else
-               truncate_flag = .TRUE.
-            end if
-         end if
-        
+      e= -Cutoff + (i-1)*step_e
+      fermiA=fermiA+Fermi (e-V, T) / (e-D+ui*GammaC)
       enddo
-      
-      if(truncate_flag) then
-         if (print_flag) then
-            write(*,*) "Truncated ExtendedFermiIntegral, &
-                        for bias direction, number, and state combination: "
-            print_flag = .FALSE.
-         end if
-         write(*,*) trim(bias_dir), i_n, i_j, i_u
-      end if
-      
       e = Cutoff
-      fermiA = fermiA + 0.5_q*Fermi(e-V,T) / (e - D + ui*GammaC)
+      fermiA=fermiA+0.5*Fermi (e-V, T) / (e-D+ui*GammaC)
+
       fermiA = step_e*ui*fermiA
 
       return
       end subroutine ExtendedFermiIntegral
-      
 ! Calculation of energy integration of rates involving 1-Fermi function
       subroutine ExtendeduFermiIntegral ( D, V,  T, Cutoff, GammaC, N, ufermiA)
       implicit none
@@ -609,16 +660,16 @@ CONTAINS
 !ufermiA is Integral I21 of the Manual
 ! Trapeze-integration (the best among the better)
 
-      step_e = 2._q*Cutoff/(N-1._q)
+      step_e = 2*Cutoff/(N-1)
       e= -Cutoff 
-      ufermiA=0.5_q*(1._q-Fermi (e-V, T)) / (e+D-ui*GammaC)
+      ufermiA=0.5*(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
 
       do i = 2, N-1
-      e= -Cutoff + (i-1._q)*step_e
-      ufermiA=ufermiA+(1._q-Fermi (e-V, T)) / (e+D-ui*GammaC)
+      e= -Cutoff + (i-1)*step_e
+      ufermiA=ufermiA+(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
       enddo
       e = Cutoff
-      ufermiA=ufermiA+0.5_q*(1._q-Fermi (e-V, T)) / (e+D-ui*GammaC)
+      ufermiA=ufermiA+0.5*(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
 
       ufermiA = -step_e*ui*ufermiA
 
