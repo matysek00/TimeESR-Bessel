@@ -87,7 +87,7 @@ CONTAINS
          Spin_polarization_R, Spin_polarization_L,  &
          t_seq, Amplitude, Freq_seq, Phase_seq,  &
          fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-         n_max, p_max, B_L, B_R,  &
+         n_max, p_max, B_L, B_R,  bias_R, bias_L, &
          Temperature, Electrode, curr)
 
      implicit none
@@ -95,6 +95,7 @@ CONTAINS
      complex (qc), intent (in) :: rho (:,:,:)
      real (q), intent (in):: gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, Temperature
      real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_R, B_L
+     real (q), intent (in):: bias_R , bias_L 
      complex (qc), intent (in):: lambda (:,:,:)
 ! Sequence of pulses
 !    Gamma_1(t)=gamma_alpha_1*Amplitude (:)*cos(Freq_seq (:)*t+Phase_seq (:))*
@@ -110,33 +111,43 @@ CONTAINS
      complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
      real (q), allocatable :: curr (:)
 ! internal
-      integer :: l,j,u,n,m,np
+      integer :: l,j,u,n,m,np,i,n_index
+      complex (qc), allocatable ::  GC (:,:,:,:,:)
+      complex (qc) :: tdep, exponent
 
       allocate (curr (Ntime))
-      allocate (GC(Ndim,Ndim,Ndim,Ndim,n_max))
+      allocate (GC(Ndim,Ndim,Ndim,Ndim,2*n_max+1))
 
 
          call  ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_L, B_R, Amplitude(1,1), Freq_seq(1,1), &
+         p_max, B_L, B_R, Amplitude(1,1), Freq_seq(1,1), bias_R, bias_L,&
          Temperature, Electrode,  GC)
 
 
       curr = 0._q
-
-       do i = 1, Ntime
-
-        n= t_seq(i) ! index of the pulse interval that contains time (i)
-        np= bias_time (i) ! bias pulse
-! Pulse sequence
-          Pulse = 0._q
-        do m= 1, Nfreq
-          Pulse = Pulse + Amplitude (n,m)*cos(Freq_seq(n,m)*time(i)+Phase_seq(n))
-        enddo
-
-
-       enddo 
-
+      fourire: do n=-n_max, n_max
+      timeloop: do i = 1, Ntime
+      
+            n_index = n+n_max+1      
+            exponent = -ui*cmplx(time(i),0)*cmplx(n,0)*Freq_seq(1,1)
+            tdep = exp(exponent)
+            level_l: do l = 1, Ndim
+            level_u: do u = 1, Ndim
+            level_j: do j = 1, Ndim
+            
+!           TODO: check if this equation still holds
+            curr (i) = curr (i) +    &
+                  real(rho (l,u,i)*GC(l,j,j,u,n_index)*tdep +  &
+                  conjg(rho (l,u,i)*GC(l,j,j,u,n_index)*tdep))
+            
+            enddo level_j
+            enddo level_u                 
+            enddo level_l
+                  
+      
+      enddo timeloop 
+      enddo fourire
 ! test Gamma C
 !        do u = 1, Ndim
 !        do j = 1, Ndim
