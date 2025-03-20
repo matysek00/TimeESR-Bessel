@@ -166,7 +166,6 @@ CONTAINS
               stop
          endif
          if (use_bessel) then
-          print *, Nfreq, Ninterval, Nfreq == 1, Ninterval == 1, Nfreq == 1  .or. (Ninterval == 1)
           if (Nfreq /= 1  .or. (Ninterval /= 1)) then 
             print *, ' '
             print *, ' ERROR: Only a single cosine pulse can be used in combination with Bessel functions'
