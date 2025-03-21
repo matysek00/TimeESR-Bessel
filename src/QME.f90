@@ -80,6 +80,9 @@ CONTAINS
      return
 
      end subroutine rates 
+!    TODO: GC(v,l,j,u,n) = Electrode*G(v,l,j,u,1,n) + (1-Electrode)*G(v,l,j,u,2,n)
+!         I don't think that ratesC functions should exist. 
+
 !
 ! For the Current NOW
 !
@@ -243,7 +246,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      print *, ' '
 
      ! TODO: if I split the contributions here based uj symmetry I could save some time
-     !    but no more than a factor of 2. 
+     !    but no more than a factor of 2. also not sure about it
      level_j: do j=1,Ndim
      level_u: do u=1,Ndim
           print *, 'Delta(j,u), Delta(u,j), Temperature, Cutoff,  GammaC, N_int, fR'
@@ -379,6 +382,11 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 ! Master equation solver
 ! RK4 method
 !
+
+!    TODO: implement a Bessel version
+!          for now I can test the Bessel rates with the current function
+!          and then implement the Bessel version of the RungeKutta
+     
      subroutine RungeKutta (Ndim, Ntime, stept, Delta, rho, NFreq,  &
       lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, Nbias, &
       bias_R, bias_L, bias_time, Spin_polarization_R, Spin_polarization_L,  &
@@ -651,7 +659,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
         Fermi = exp(Fermi)
       end if
       
-! Matyas: can't find a definition of lowecase fermi 
       if (fermi > 1.0e30_q) then
         Fermi = 0._q
       else

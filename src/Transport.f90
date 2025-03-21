@@ -59,9 +59,13 @@ CONTAINS
             do l = 1, Ndim
             do u = 1, Ndim
             do j = 1, Ndim
-      curr (i) = curr (i) +    &
-            real(rho (l,u,i)*GC(l,j,j,u,np)+conjg(rho (l,u,i)*GC(l,j,j,u,np)))*  &
-            (1+Pulse*((1-Electrode)*gamma_L_1/gamma_L_0+Electrode*gamma_R_1/gamma_R_0))
+            
+!           TODO: We calculate the entire GC tesnor but only use G(l,j,j,u,np)
+!                 we could reduce the scaling of the code from Ndim^4 to Ndim^3 
+!                 for the GC tensor. (irrelevant if we combine G and GC)
+            curr (i) = curr (i) +    &
+                  real(rho (l,u,i)*GC(l,j,j,u,np)+conjg(rho (l,u,i)*GC(l,j,j,u,np)))*  &
+                  (1+Pulse*((1-Electrode)*gamma_L_1/gamma_L_0+Electrode*gamma_R_1/gamma_R_0))
             enddo
             enddo
             enddo
