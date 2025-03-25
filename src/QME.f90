@@ -223,9 +223,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A/2*(J(p-1)+ J(p+1))
-     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
-     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
+     ! K(p) = J(p) + A*(J(p-1)+ J(p+1))
+     K_L = J_L(2:2*p_max) + Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
+     K_R = J_R(2:2*p_max) + Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
      
      g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
@@ -287,7 +287,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                     if (n==0) then
                          !print *, v, l, j, u, n, n_index
                          !print *, 'GC (v,l,j,u,n):'
-                         !print *, GC (v,l,j,u,n_index)/(1+0.25*Amplitude**2)
+                         !print *, GC (v,l,j,u,n_index)/(1+Amplitude**2)
                          !print *, ' '
                     end if
                
