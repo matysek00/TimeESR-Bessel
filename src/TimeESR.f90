@@ -100,7 +100,7 @@ implicit none
                Spin_polarization_R, Spin_polarization_L,  &
                t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
                fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-               n_max, p_max, B_L, B_R, bias_L(1), bias_R(1), &
+               n_max, p_max, B_R, B_L, bias_R(1), bias_L(1), &
                Temperature, Electrode, curr)
      else
           call Current (Ndim, Ntime, rho, NFreq, Nbias, bias_time, &

@@ -159,9 +159,12 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g1ma_up+  &
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g1ma_dn
           
-          
           GC (v,l,j,u,n) = GC (v,l,j,u,n) + 0.5*(Lvluja - Ljulva) ! This has the right admixture of electrodes
-
+          
+          !print *, v, l, j, u, n
+          !print *, 'GC (v,l,j,u,n):'
+          !print *, GC (v,l,j,u,n)
+          !print *, ' '
 
      enddo
      enddo
@@ -175,7 +178,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 
      subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_L, B_R, Amplitude, frequency, bias_R, bias_L, &
+         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, &
          Temperature, Electrode,  GC)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculation of the QME rates
@@ -207,79 +210,58 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!    MATYAS: I am using u a bit liberaly here, it no longer refers to 1-fermi_uv
-!         but just to swapping u and v. 
 !    Calculate Contribution of Bessel functions
-    
-     print *, 'p_max, B_L, B_R, frequency, Amplitude,'
-     print *, p_max, B_L, B_R, frequency, Amplitude 
-     print *, ' '
-     
+         
      ! TODO: check the generalization to multiple frequencies. 
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
-     J_L = Bessel_JN(-p_max, p_max, B_L/frequency)
-     J_R = Bessel_JN(-p_max, p_max, B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
      
-     print *, 'Bessel funciontions:'
-     print *, J_L
-     print *, J_R 
-     print *, ' '
+     negative_bessel : do p = 0, p_max -1
+          J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
+          J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
+     enddo negative_bessel
 
      ! K(p) = J(p) + A/2*(J(p-1)+ J(p+1))
      K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
      K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
      
-     print *, 'Bessel contributions:'
-     print *, K_L
-     print *, K_R
-     print *, ' '
-
-     ! TODO:   Define general fermi function
      g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
      g1pa_up = 0.5 * (1-Electrode) * gamma_L_0 * (1+Spin_polarization_L)
      g1pa_dn = 0.5 * (1-Electrode) * gamma_L_0 * (1-Spin_polarization_L)
 
-     print *, 'g0pa_up, g0pa_dn, g1pa_up, g1pa_dn'
-     print *, g0pa_up, g0pa_dn, g1pa_up, g1pa_dn
-     print *, ' '
-
-     ! TODO: if I split the contributions here based uj symmetry I could save some time
-     !    but no more than a factor of 2. also not sure about it
      level_j: do j=1,Ndim
      level_u: do u=1,Ndim
-          print *, 'Delta(j,u), Delta(u,j), Temperature, Cutoff,  GammaC, N_int, fR'
-          print *,  Delta(j,u), Delta(u,j), Temperature, Cutoff,  GammaC, N_int, fR
-          print *, ' '
 
 !         Precalculate orbital overlaps
           lambda_v: do v=1,Ndim
           lambda_l: do l=1, Ndim
                LvlujaR(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
+                              lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
                LjulvaR(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*g0pa_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g0pa_dn
+                              lambda (j,u,2)*conjg(lambda(l,v,2))*g0pa_dn
                LvlujaL(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
+                              lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
                LjulvaL(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*g1pa_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g1pa_dn
+                              lambda (j,u,2)*conjg(lambda(l,v,2))*g1pa_dn
           enddo lambda_l
           enddo lambda_v
           
           fermi: do p = 1, 2*p_max-2*n_max 
-               
-               call ExtendedFermiIntegral ( Delta(j,u)-p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-               call ExtendedFermiIntegral ( Delta(u,j)-p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral ( Delta(j,u)-p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-               call ExtendedFermiIntegral ( Delta(u,j)-p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
-               
+!              WARNING: replace 0 with frequency
+               call ExtendedFermiIntegral ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+               call ExtendedFermiIntegral ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+
                fermiRB(p)  = fR  / pi_d
                ufermiRB(p) = ufR / pi_d
                fermiLB(p)  = fL  / pi_d
                ufermiLB(p) = ufL / pi_d
           enddo fermi
-          
+
           fourier_component: do n =-n_max,n_max
                n_index = n + n_max + 1
 
@@ -295,34 +277,21 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                     bessel_contributionL  = bessel_contributionL  + K_L(p) * K_L(p-n) * fermiLB(p)
                     ubessel_contributionL = ubessel_contributionL + K_L(p) * K_L(p+n) * ufermiLB(p)   
                enddo  bessel
-                    
-               print *, 'Bessel contributions (R, uR, L, uL):'
-               print *, bessel_contributionR
-               print *, ubessel_contributionR
-               print *, bessel_contributionL
-               print *, ubessel_contributionL
-               print *, ' '
-               
+                              
                level_v: do v=1,Ndim
                level_l: do l=1, Ndim
-                    print *, 'GC (v,l,j,u,n):'
-                    print *, v, l, j, u, n, n_index
+                    
+                    GC (v,l,j,u,n_index) = 0.5*(  LvlujaR(v,l) * bessel_contributionR - LjulvaR(v,l) * ubessel_contributionR + &
+                                                  LvlujaL(v,l) * bessel_contributionL - LjulvaL(v,l) * ubessel_contributionL)
                
-                    GC (v,l,j,u,n_index) = 0.5 * LvlujaR(v,l) * bessel_contributionR - LjulvaR(v,l) * ubessel_contributionR
-                    GC (v,l,j,u,n_index) = 0.5 * LvlujaL(v,l) * bessel_contributionL - LjulvaL(v,l) * ubessel_contributionL
-               
-               
-!                   add (1+Acos(wt))^2
                     if (n==0) then
-                         GC (v,l,j,u,n_index) = GC (v,l,j,u,n_index) + 0.5  * (LjulvaL(v,l) + LjulvaR(v,l)) * (1.+0.25*Amplitude**2)
-                    else if (n==1) then
-                         GC (v,l,j,u,n_index) = GC (v,l,j,u,n_index) + 0.5  * (LjulvaL(v,l) + LjulvaR(v,l)) * Amplitude
-                    else if (n==2) then
-                         GC (v,l,j,u,n_index) = GC (v,l,j,u,n_index) + 0.25 * (LjulvaL(v,l) + LjulvaR(v,l)) * Amplitude**2
+                         !print *, v, l, j, u, n, n_index
+                         !print *, 'GC (v,l,j,u,n):'
+                         !print *, GC (v,l,j,u,n_index)/(1+0.25*Amplitude**2)
+                         !print *, ' '
                     end if
                
-                    print *, GC (v,l,j,u,n_index)
-                    print *, ' '
+                    
      enddo level_l
      enddo level_v
      enddo fourier_component

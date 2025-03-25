@@ -40,8 +40,6 @@ CONTAINS
             Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
             Temperature, Electrode,  GC)
 
-
-
       curr = 0._q
 
       do i = 1, Ntime
@@ -91,7 +89,7 @@ CONTAINS
          Spin_polarization_R, Spin_polarization_L,  &
          t_seq, Amplitude, Freq_seq, Phase_seq,  &
          fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-         n_max, p_max, B_L, B_R,  bias_R, bias_L, &
+         n_max, p_max, B_R, B_L,  bias_R, bias_L, &
          Temperature, Electrode, curr)
 
      implicit none
@@ -125,9 +123,8 @@ CONTAINS
 
          call  ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_L, B_R, Amplitude(1,1), Freq_seq(1,1), bias_R, bias_L,&
-         Temperature, Electrode,  GC)
-
+         p_max, B_R, B_L, Amplitude(1,1), Freq_seq(1,1), bias_R, bias_L,&
+         Temperature, Electrode,  GC)       
 
       curr = 0._q
       fourire: do n=-n_max, n_max
