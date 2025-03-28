@@ -52,8 +52,6 @@ CONTAINS
             Pulse = Pulse + Amplitude (n,m)*cos(Freq_seq(n,m)*time(i)+Phase_seq(n))
       enddo
 
-
-
             do l = 1, Ndim
             do u = 1, Ndim
             do j = 1, Ndim
@@ -64,7 +62,7 @@ CONTAINS
             curr (i) = curr (i) +    &
                   real(rho (l,u,i)*GC(l,j,j,u,np)+ &
                   conjg(rho (l,u,i)*GC(l,j,j,u,np)))*  &
-                  (1+Pulse*((1-Electrode)*gamma_L_1/gamma_L_0+Electrode*gamma_R_1/gamma_R_0))
+                  (1+Pulse*((1-Electrode)*gamma_L_1/gamma_L_0+Electrode*gamma_R_1/gamma_R_0))**2
             enddo
             enddo
             enddo
@@ -127,7 +125,7 @@ CONTAINS
 
       call ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
             Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-            p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L,&
+            p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L, Phase_seq(1),&
             Temperature, Electrode,  GC)       
 
       curr = 0._q
@@ -142,7 +140,7 @@ CONTAINS
             level_u: do u = 1, Ndim
             level_j: do j = 1, Ndim
             
-!           TODO: check if this equation still holds
+!           TODO: why is A+conj(A) and then we take the rela part? why not just 2*real(A)
             curr (i) = curr (i) +    &
                   real(rho (l,u,i)*GC(l,j,j,u,n_index)*tdep +  &
                   conjg(rho (l,u,i)*GC(l,j,j,u,n_index)*tdep))

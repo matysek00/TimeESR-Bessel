@@ -160,11 +160,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                     lambda (j,u,2)*conjg(lambda(l,v,2))*g1ma_dn
           
           GC (v,l,j,u,n) = GC (v,l,j,u,n) + 0.5*(Lvluja - Ljulva) ! This has the right admixture of electrodes
-          
-          !print *, v, l, j, u, n
-          !print *, 'GC (v,l,j,u,n):'
-          !print *, GC (v,l,j,u,n)
-          !print *, ' '
 
      enddo
      enddo
@@ -178,7 +173,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 
      subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, &
+         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, Phase,&
          Temperature, Electrode,  GC)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculation of the QME rates
@@ -187,7 +182,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      implicit none
 ! Input:
      complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude
+     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude, Phase
      real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
      real (q), intent (in):: bias_R , bias_L 
      integer :: Ndim, NFreq, Nbias, p_max
@@ -202,8 +197,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      integer :: v, l, j, u, n, i, m, p, n_index
      complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
      complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
+     complex (qc), dimension(2*p_max-1) :: K_L, K_R
      real (q), dimension(2*p_max+1) :: J_L, J_R
-     real (q), dimension(2*p_max-1) :: K_L, K_R
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
@@ -223,10 +218,10 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A*(J(p-1)+ J(p+1))
-     K_L = J_L(2:2*p_max) + Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
-     K_R = J_R(2:2*p_max) + Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
-     
+     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
+     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1)*exp(-ui*Phase) + J_L(3:2+p_max+1)*exp(ui*Phase)) 
+     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1)*exp(-ui*Phase) + J_R(3:2+p_max+1)*exp(ui*Phase)) 
+
      g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
      g1pa_up = 0.5 * (1-Electrode) * gamma_L_0 * (1+Spin_polarization_L)
@@ -251,9 +246,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           
           fermi: do p = 1, 2*p_max-2*n_max 
 !              WARNING: replace 0 with frequency
-               call ExtendedFermiIntegral ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
                call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
                call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
 
                fermiRB(p)  = fR  / pi_d
@@ -270,25 +265,22 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                bessel_contributionL  = 0 
                ubessel_contributionR = 0 
                ubessel_contributionL = 0 
-               
+
+!              sum_p K*_{p-n} K_p  I(p)                              
+!              sum_p K*_p K_{p+n}  uI(p)                              
                bessel: do p = n_max+1, 2*p_max-n_max-1
-                    bessel_contributionR  = bessel_contributionR  + K_R(p) * K_R(p-n) * fermiRB(p)
-                    ubessel_contributionR = ubessel_contributionR + K_R(p) * K_R(p+n) * ufermiRB(p)     
-                    bessel_contributionL  = bessel_contributionL  + K_L(p) * K_L(p-n) * fermiLB(p)
-                    ubessel_contributionL = ubessel_contributionL + K_L(p) * K_L(p+n) * ufermiLB(p)   
+                    bessel_contributionR  = bessel_contributionR  + conjg(K_R(p-n)) * K_R(p)   * fermiRB(p)
+                    ubessel_contributionR = ubessel_contributionR + conjg(K_R(p))   * K_R(p+n) * ufermiRB(p)     
+                    bessel_contributionL  = bessel_contributionL  + conjg(K_L(p-n)) * K_L(p)   * fermiLB(p)
+                    ubessel_contributionL = ubessel_contributionL + conjg(K_L(p) )  * K_L(p+n) * ufermiLB(p)   
                enddo  bessel
-                              
+
                level_v: do v=1,Ndim
                level_l: do l=1, Ndim
                     
                     GC (v,l,j,u,n_index) = 0.5*(  LvlujaR(v,l) * bessel_contributionR - LjulvaR(v,l) * ubessel_contributionR + &
-                                                  LvlujaL(v,l) * bessel_contributionL - LjulvaL(v,l) * ubessel_contributionL)
-               
-                    if (n==0) then
-                         !print *, v, l, j, u, n, n_index
-                         !print *, 'GC (v,l,j,u,n):'
-                         !print *, GC (v,l,j,u,n_index)/(1+Amplitude**2)
-                         !print *, ' '
+                                                  LvlujaL(v,l) * bessel_contributionL - LjulvaL(v,l) * ubessel_contributionL)     
+                    if (n==n_max) then
                     end if
                
                     
