@@ -45,12 +45,10 @@ CONTAINS
       g0m_dn = gamma_R_0*ufermiR*(1-Spin_polarization_R)*0.5
 
 ! Left electrode
-
       g1p_up = gamma_L_0*fermiL*(1+Spin_polarization_L)*0.5
       g1m_up = gamma_L_0*ufermiL*(1+Spin_polarization_L)*0.5
       g1p_dn = gamma_L_0*fermiL*(1-Spin_polarization_L)*0.5
       g1m_dn = gamma_L_0*ufermiL*(1-Spin_polarization_L)*0.5
-
 
         do v=1,Ndim
         do l=1,Ndim
@@ -169,7 +167,129 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      
      return
  
-      end subroutine ratesC 
+     end subroutine ratesC 
+
+     subroutine rates_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
+         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
+         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, Phase,&
+         Temperature, Electrode,  GC)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! calculation of the QME rates
+! time dependent
+! for pulses that are either steps or cosine or a sequence of both
+     implicit none
+! Input:
+     complex (qc), intent (in):: lambda (:,:,:)
+     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude, Phase
+     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
+     real (q), intent (in):: bias_R , bias_L 
+     integer :: Ndim, NFreq, Nbias, p_max
+     integer :: Electrode
+! Output: the Rates called GC (:,:,:,:,:) here
+     complex (qc) :: GC (:,:,:,:,:) ! for current
+! Computed in ExtendedFermiIntegral
+     complex (qc) :: fR, ufR, fL, ufL
+     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
+     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
+! Only used in this subroutine
+     integer :: v, l, j, u, n, i, m, p, n_index
+     complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
+     complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
+     complex (qc), dimension(2*p_max-1) :: K_L, K_R
+     real (q), dimension(2*p_max+1) :: J_L, J_R
+     complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
+     complex (qc) :: bessel_contributionR, ubessel_contributionR
+     complex (qc) :: bessel_contributionL, ubessel_contributionL
+     
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!    Calculate Contribution of Bessel functions
+         
+     ! TODO: check the generalization to multiple frequencies. 
+     ! this should be one function called for L and R seperately
+     ! calculate positive bessels
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
+     
+     negative_bessel : do p = 0, p_max -1
+          J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
+          J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
+     enddo negative_bessel
+
+     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
+     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1)*exp(-ui*Phase) + J_L(3:2+p_max+1)*exp(ui*Phase)) 
+     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1)*exp(-ui*Phase) + J_R(3:2+p_max+1)*exp(ui*Phase)) 
+
+     g0pa_up = 0.5 * gamma_R_0 * (1+Spin_polarization_R)
+     g0pa_dn = 0.5 * gamma_R_0 * (1-Spin_polarization_R)
+     g1pa_up = 0.5 * gamma_L_0 * (1+Spin_polarization_L)
+     g1pa_dn = 0.5 * gamma_L_0 * (1-Spin_polarization_L)
+
+     level_j: do j=1,Ndim
+     level_u: do u=1,Ndim
+
+!         Precalculate orbital overlaps
+          lambda_v: do v=1,Ndim
+          lambda_l: do l=1, Ndim
+               LvlujaR(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+  &
+                              lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
+               LjulvaR(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*g0pa_up+  &
+                              lambda (j,u,2)*conjg(lambda(l,v,2))*g0pa_dn
+               LvlujaL(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
+                              lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
+               LjulvaL(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*g1pa_up+  &
+                              lambda (j,u,2)*conjg(lambda(l,v,2))*g1pa_dn
+          enddo lambda_l
+          enddo lambda_v
+          
+          fermi: do p = 1, 2*p_max-2*n_max 
+!              WARNING: replace 0 with frequency
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+
+               fermiRB(p)  = fR  / pi_d
+               ufermiRB(p) = ufR / pi_d
+               fermiLB(p)  = fL  / pi_d
+               ufermiLB(p) = ufL / pi_d
+          enddo fermi
+
+          fourier_component: do n =-n_max,n_max
+               n_index = n + n_max + 1
+
+               ! contribution of bessel functions
+               bessel_contributionR  = 0 
+               bessel_contributionL  = 0 
+               ubessel_contributionR = 0 
+               ubessel_contributionL = 0 
+
+!              sum_p K*_{p-n} K_p  I(p)                              
+!              sum_p K*_p K_{p+n}  uI(p)                              
+               bessel: do p = n_max+1, 2*p_max-n_max-1
+                    bessel_contributionR  = bessel_contributionR  + conjg(K_R(p-n)) * K_R(p)   * fermiRB(p)
+                    ubessel_contributionR = ubessel_contributionR + conjg(K_R(p))   * K_R(p+n) * ufermiRB(p)     
+                    bessel_contributionL  = bessel_contributionL  + conjg(K_L(p-n)) * K_L(p)   * fermiLB(p)
+                    ubessel_contributionL = ubessel_contributionL + conjg(K_L(p) )  * K_L(p+n) * ufermiLB(p)   
+               enddo  bessel
+
+               level_v: do v=1,Ndim
+               level_l: do l=1, Ndim
+               
+               G (v,l,j,u,1,n_index) = 0.5*( LvlujaR(v,l) * bessel_contributionR + &
+                                             LjulvaR(v,l) * ubessel_contributionR)
+               G (v,l,j,u,2,n_index) = 0.5*( LvlujaL(v,l) * bessel_contributionL + &
+                                             LjulvaL(v,l) * ubessel_contributionL)                                   
+               enddo level_l
+               enddo level_v
+          enddo fourier_component
+     enddo level_u
+     enddo level_j
+         
+     return
+
+     end subroutine rates_bessel 
+
 
      subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
@@ -278,15 +398,15 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                level_v: do v=1,Ndim
                level_l: do l=1, Ndim
                     
-                    GC (v,l,j,u,n_index) = 0.5*(  LvlujaR(v,l) * bessel_contributionR - LjulvaR(v,l) * ubessel_contributionR + &
-                                                  LvlujaL(v,l) * bessel_contributionL - LjulvaL(v,l) * ubessel_contributionL)     
-                    if (n==n_max) then
-                    end if
-               
-                    
-     enddo level_l
-     enddo level_v
-     enddo fourier_component
+               GC (v,l,j,u,n_index) = 0.5* ( &
+                    LvlujaR(v,l) * bessel_contributionR - &
+                    LjulvaR(v,l) * ubessel_contributionR + &
+                    LvlujaL(v,l) * bessel_contributionL - &
+                    LjulvaL(v,l) * ubessel_contributionL) 
+                                     
+               enddo level_l
+               enddo level_v
+          enddo fourier_component
      enddo level_u
      enddo level_j
          
