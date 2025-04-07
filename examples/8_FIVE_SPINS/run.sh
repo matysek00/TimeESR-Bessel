@@ -102,6 +102,12 @@ cat >TimeESR.input <<@@
 0.0          ! Spin polarization of electrode R, between -1 and 1
 0.0          ! Spin polarization of electrode L, between -1 and 1
 0            ! Current measurement: 0 is left and 1 is right electrode
+---------------Bessel function set up-----------------------------
+.false.      ! Use bessel functions 
+1          ! B_L strengt of the time depenndet pulse for left electrode
+1          ! B_R strengt of the time depenndet pulse for right electrode
+10           ! number of bessel functions to consider in both directions
+3           ! number of frequencis to consider in both directions
 ---------------output file names----------------------------------
 .true.       ! .true. write POPULATIONS.dat
 .false.      ! .true. write RHO.dat

@@ -47,10 +47,12 @@ Hamiltonian.output ! Name of the output file with H
 4                  ! Number of states to print in Spin_distribution.dat
 .true.             ! .true. Write pre-diagonalized Hamiltonian to PD_HAMIL.dat
 .true.             ! .true. Write all eigenvectors to EIGENVECT.dat
-*****************************************************************
-***************** END of INPUT FILE H_QD.input ******************
-*****************************************************************
-@
+*****************************************************************---------------Bessel function set up-----------------------------
+.false.      ! Use bessel functions 
+1          ! B_L strengt of the time depenndet pulse for left electrode
+1          ! B_R strengt of the time depenndet pulse for right electrode
+10           ! number of bessel functions to consider in both directions
+3           ! number of frequencis to consider in both directions
 # Perform a DC simulation for a series of frequencies in order to produce a CW-ESR-like plot
 for freq in `LC_ALL=C seq $freqstart $freqdiff $freqend`
 do
@@ -84,6 +86,12 @@ $time        ! 1 - Duration of bias pulse (ns)
 0.0          ! Spin polarization of electrode R, between -1 and 1
 1.0          ! Spin polarization of electrode L, between -1 and 1
 0            ! Current measurement: 0 is left and 1 is right electrode
+---------------Bessel function set up-----------------------------
+.false.      ! Use bessel functions 
+1          ! B_L strengt of the time depenndet pulse for left electrode
+1          ! B_R strengt of the time depenndet pulse for right electrode
+10           ! number of bessel functions to consider in both directions
+3           ! number of frequencis to consider in both directions
 ---------------output file names----------------------------------
 .true.       ! .true. write POPULATIONS.dat
 .false.      ! .true. write RHO.dat
