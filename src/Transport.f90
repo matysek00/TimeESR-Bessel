@@ -87,7 +87,6 @@ CONTAINS
          lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, &
          Spin_polarization_R, Spin_polarization_L,  &
          t_seq, Amplitude, Freq_seq, Phase_seq,  &
-         fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
          n_max, p_max, B_R, B_L,  bias_R, bias_L, &
          Temperature, Electrode, curr)
 
@@ -107,9 +106,8 @@ CONTAINS
      real (q), intent (in):: Phase_seq (:) ! sequence of pulses
      real (q) :: Pulse  !for time i
 ! Computed in ExtendedFermiIntegral called in RungeKutta
-     complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
-     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
-     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
+     complex (qc), allocatable :: fermiR_a(:,:,:), fermiL_a(:,:,:)
+     complex (qc), allocatable  :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
      real (q), allocatable :: curr (:)
 ! internal
       integer :: l,j,u,n,m,np,i,n_index
@@ -124,8 +122,8 @@ CONTAINS
                                           Electrode*gamma_R_1/gamma_R_0)
 
       call ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
-            Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-            p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L, Phase_seq(1),&
+            Spin_polarization_R, Spin_polarization_L, &
+            p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L, &
             Temperature, Electrode,  GC)       
 
       curr = 0._q
@@ -133,7 +131,7 @@ CONTAINS
       timeloop: do i = 1, Ntime
       
             n_index = n+n_max+1      
-            exponent = -ui*Freq_seq(1,1)*(cmplx(time(i),0)*cmplx(n,0)+ Phase_seq(1))
+            exponent = -ui*cmplx(n,0)*(cmplx(time(i),0)*Freq_seq(1,1)+ Phase_seq(1))
             tdep = exp(exponent)
             
             level_l: do l = 1, Ndim

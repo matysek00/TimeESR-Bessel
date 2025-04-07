@@ -170,9 +170,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      end subroutine ratesC 
 
      subroutine rates_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, Phase,&
-         Temperature, Electrode,  GC)
+         Spin_polarization_R, Spin_polarization_L, &
+         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L,&
+         Temperature, Electrode,  G)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculation of the QME rates
 ! time dependent
@@ -180,17 +180,16 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      implicit none
 ! Input:
      complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude, Phase
+     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency
      real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
      real (q), intent (in):: bias_R , bias_L 
+     real (q), intent (in), dimension(2) :: Amplitude
      integer :: Ndim, NFreq, Nbias, p_max
      integer :: Electrode
 ! Output: the Rates called GC (:,:,:,:,:) here
-     complex (qc) :: GC (:,:,:,:,:) ! for current
+     complex (qc) :: G (:,:,:,:,:,:)
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fR, ufR, fL, ufL
-     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
-     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
 ! Only used in this subroutine
      integer :: v, l, j, u, n, i, m, p, n_index
      complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
@@ -217,8 +216,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      enddo negative_bessel
 
      ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
-     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1)*exp(-ui*Phase) + J_L(3:2+p_max+1)*exp(ui*Phase)) 
-     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1)*exp(-ui*Phase) + J_R(3:2+p_max+1)*exp(ui*Phase)) 
+     K_R = J_R(2:2*p_max) + 0.5 * Amplitude(1) * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
+     K_L = J_L(2:2*p_max) + 0.5 * Amplitude(2) * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
 
      g0pa_up = 0.5 * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * gamma_R_0 * (1-Spin_polarization_R)
@@ -292,8 +291,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 
 
      subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L, Phase,&
+         Spin_polarization_R, Spin_polarization_L, &
+         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L,&
          Temperature, Electrode,  GC)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculation of the QME rates
@@ -302,7 +301,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      implicit none
 ! Input:
      complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude, Phase
+     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude
      real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
      real (q), intent (in):: bias_R , bias_L 
      integer :: Ndim, NFreq, Nbias, p_max
@@ -311,8 +310,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: GC (:,:,:,:,:) ! for current
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fR, ufR, fL, ufL
-     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
-     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
 ! Only used in this subroutine
      integer :: v, l, j, u, n, i, m, p, n_index
      complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
@@ -339,8 +336,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      enddo negative_bessel
 
      ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
-     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1)*exp(-ui*Phase) + J_L(3:2+p_max+1)*exp(ui*Phase)) 
-     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1)*exp(-ui*Phase) + J_R(3:2+p_max+1)*exp(ui*Phase)) 
+     K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
+     K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
 
      g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
@@ -473,7 +470,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
       bias_R, bias_L, bias_time, Spin_polarization_R, Spin_polarization_L,  &
       t_seq, Amplitude, Freq_seq, Phase_seq,  &
       fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-      N_int, GammaC, Cutoff, time, Temperature)
+      n_max, p_max, B_R, B_L, &
+      N_int, GammaC, Cutoff, time, Temperature, use_bessel)
 
      implicit none
      real (q), intent (in) :: stept
@@ -482,9 +480,12 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      real (q), intent (in):: bias_R (:) , bias_L (:)
      real (q) :: Spin_polarization_R, Spin_polarization_L
      complex (qc), intent (in):: lambda (:,:,:)
-     integer :: Ndim, Ntime, NFreq, N_int, Nbias
-     real (q) :: Pulse  !for time i and i+1
+     logical, intent (in):: use_bessel
+     integer :: Ndim, Ntime, NFreq, N_int, Nbias, n_max, p_max
+     real (q), dimension(2) :: Pulse, PulseR, PulseL  !for time i and i+1
+     real (q), intent (in):: B_R, B_L
      complex (qc), allocatable:: Gstatic (:,:,:,:,:,:)
+     complex (qc), allocatable:: Gbess (:,:,:,:,:,:)
      complex (qc), allocatable:: G (:,:,:,:,:)
      complex (qc) :: rho (:,:,:)
      complex (qc) :: Temp1, Temp2 !buffers for changing names...
@@ -495,26 +496,39 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      real (q), intent (in):: Amplitude (:,:) ! sequence of pulses
      real (q), intent (in):: Freq_seq (:,:) ! sequence of pulses
      real (q), intent (in):: Phase_seq (:) ! sequence of pulses
+     real (q), dimension(2) :: effec_Amplitude
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
      complex (qc), allocatable:: fermiR_a(:,:,:), fermiL_a(:,:,:)
      complex (qc), allocatable:: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
 ! internal
-     integer :: n, l, j, i, u, v, m, nb
+     integer :: l, j, i, u, v, m, n, n_index
+     integer, dimension(2) :: na
      real (q) :: half
      complex (qc), allocatable :: k1(:), k2(:), k3(:), k4(:), D(:), P(:)
 
       
      allocate (k1(Ndim*Ndim), k2(Ndim*Ndim), k3(Ndim*Ndim), k4(Ndim*Ndim))
      allocate (D(Ndim*Ndim), P (Ndim*Ndim))
-     allocate (Gstatic(Ndim,Ndim,Ndim,Ndim,2,Nbias))
      allocate (G(Ndim,Ndim,Ndim,Ndim,2))
      allocate (fermiR_a(Ndim,Ndim,Nbias))
      allocate (fermiL_a(Ndim,Ndim,Nbias))
      allocate (ufermiR_a(Ndim,Ndim,Nbias))
      allocate (ufermiL_a(Ndim,Ndim,Nbias))
+     
+     if (use_bessel) then
+          allocate (Gbess(Ndim,Ndim,Ndim,Ndim,2,n_max*2+1))
+          ! TODO: the amplitude is wrong here
+          effec_Amplitude(1) = Amplitude(1,1)*gamma_R_1/gamma_R_0
+          effec_Amplitude(2) = Amplitude(1,1)*gamma_L_1/gamma_L_0     
 
+          call rates_bessel(Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
+               Spin_polarization_R, Spin_polarization_L, p_max, B_R, B_L,  &
+               effec_Amplitude, Freq_seq(1,1), bias_R(1), bias_L(1), &
+               Temperature, Electrode, Gbess) 
+     else
 ! Bias intergal
+     allocate (Gstatic(Ndim,Ndim,Ndim,Ndim,2,Nbias))
      do n = 1, Nbias
 ! I11 and I21 from the Manual are honored here:
      do j=1,Ndim
@@ -533,41 +547,54 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      enddo
      enddo
 
+     
        call rates (Ndim, NFreq, Ntime, Nbias, lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a,   &
          ufermiR_a, ufermiL_a, Temperature, Gstatic)
+     endif
 
 ! loop on time
       call clock ('Entering time loop in RK after computing static rates', 2)
 ! Matyas: Name loops 
-       do i = 1, Ntime-1
+       time_loop: do i = 1, Ntime-1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! generate rates for this time i, and  next one i+1
-        n= t_seq(i) ! index of the pulse interval that contains time (i)
-        nb= bias_time (i) ! same idea but for the bias pulse
+     if (use_bessel) then
+          fourire: do n=-n_max, n_max
+          n_index = n+n_max+1      
+          Pulse(1) = exp(-ui*cmplx(n,0)*(cmplx(time(i  ),0)*Freq_seq(1,1)+ Phase_seq(1)))
+          Pulse(2) = exp(-ui*cmplx(n,0)*(cmplx(time(i+1),0)*Freq_seq(1,1)+ Phase_seq(1)))
+          G(:,:,:,:,1) = (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(1)
+          G(:,:,:,:,2) = (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(2)
+          
+          enddo fourire
+     else
+        na= t_seq(i:i+1) ! index of the pulse interval that contains time (i)
+        print *, t_seq(i:i+1),n
 ! Pulse sequence
           Pulse = 0._q
         do m= 1, Nfreq
-          Pulse = Pulse + Amplitude (n,m)*cos(Freq_seq(n,m)*time(i)+Phase_seq(n))
+          !TODO: this could be writen in one line but not sure if it is more readable
+          Pulse(1) = Pulse(1) + Amplitude (na(1),m)*cos(Freq_seq(na(1),m)*time(i)  +Phase_seq(na(1)))
+          Pulse(2) = Pulse(2) + Amplitude (na(2),m)*cos(Freq_seq(na(2),m)*time(i+1)+Phase_seq(na(2)))
         enddo
+     
+        PulseR = (1._q + Pulse*gamma_R_1/gamma_R_0)**2
+        PulseL = (1._q + Pulse*gamma_L_1/gamma_L_0)**2
 
 ! Add pulse on G, I first create a temporal value to add left and right electrode
 ! and then I crash the left and right G by the first and second times (ugly, I KNOW)
-          
-        G (:,:,:,:,1) = Gstatic (:,:,:,:,1,nb)*(1._q+Pulse*gamma_R_1/gamma_R_0) + &
-               Gstatic (:,:,:,:,2,nb)*(1._q+Pulse*gamma_L_1/gamma_L_0) ! The driving is the ratio gamma_R_1/gamma_R_0
+          n = bias_time (i) 
+          G (:,:,:,:,1) =  Gstatic (:,:,:,:,1,n)*PulseR(1) + &
+                         Gstatic (:,:,:,:,2,n)*PulseL(1) ! The driving is the ratio gamma_R_1/gamma_R_0
 
 ! Repeat for time i+1
-        n= t_seq(i+1) ! index of the pulse interval that contains time (i)
 ! Pulse sequence
-          Pulse  = 0._q
-        do m= 1, Nfreq
-          Pulse = Pulse  + Amplitude (n,m)*cos(Freq_seq(n,m)*time(i+1)+Phase_seq(n))
-        enddo
-
-        G (:,:,:,:,2) = Gstatic (:,:,:,:,1,nb)*(1._q+Pulse*gamma_R_1/gamma_R_0) + &
-               Gstatic (:,:,:,:,2,nb)*(1._q+Pulse*gamma_L_1/gamma_L_0) ! The driving is the ratio gamma_R_1/gamma_R_0
+        n = bias_time (i+1)
+        G (:,:,:,:,2) = Gstatic (:,:,:,:,1,n)*PulseR(2) + &
+                        Gstatic (:,:,:,:,2,n)*PulseL(2) ! The driving is the ratio gamma_R_1/gamma_R_0
+      endif
 ! G(:,:,:,:,1) is for time i and G(:,:,:,:,2) is for time i+1
 ! end generate rates for this time i, and i+1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -628,11 +655,15 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
        enddo
        enddo
 
-       enddo
+       enddo time_loop
 
      deallocate (k1, k2, k3, k4)
      deallocate (D,P)
-     deallocate (Gstatic)
+     if (use_bessel) then
+       deallocate (Gbess)
+     else
+       deallocate (Gstatic)
+     end if
      deallocate (G)
 
        return

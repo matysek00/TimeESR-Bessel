@@ -89,7 +89,8 @@ implicit none
          bias_R, bias_L, bias_time, Spin_polarization_R, Spin_polarization_L,  &
          t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
          fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
-         N_int, GammaC, Cutoff, time, Temperature)
+         n_max, p_max, B_R, B_L, &
+         N_int, GammaC, Cutoff, time, Temperature, use_bessel)
      call clock ('Finished Runge Kutta solver ', 2)
         
      call clock ('STEP 4:: Electronic current ', 1)
@@ -99,7 +100,6 @@ implicit none
                lambda, gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1, &
                Spin_polarization_R, Spin_polarization_L,  &
                t_seq, Amplitude_seq, Freq_seq, Phase_seq,  &
-               fermiR_a, fermiL_a, ufermiR_a, ufermiL_a,  &
                n_max, p_max, B_R, B_L, bias_R(1), bias_L(1), &
                Temperature, Electrode, curr)
      else
