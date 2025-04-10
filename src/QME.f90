@@ -278,7 +278,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                G (v,l,j,u,1,n_index) = 0.5*( LvlujaR(v,l) * bessel_contributionR + &
                                              LjulvaR(v,l) * ubessel_contributionR)
                G (v,l,j,u,2,n_index) = 0.5*( LvlujaL(v,l) * bessel_contributionL + &
-                                             LjulvaL(v,l) * ubessel_contributionL)                                   
+                                             LjulvaL(v,l) * ubessel_contributionL)
+                                             
                enddo level_l
                enddo level_v
           enddo fourier_component
@@ -482,7 +483,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc), intent (in):: lambda (:,:,:)
      logical, intent (in):: use_bessel
      integer :: Ndim, Ntime, NFreq, N_int, Nbias, n_max, p_max
-     real (q), dimension(2) :: Pulse, PulseR, PulseL  !for time i and i+1
+     complex (qc), dimension(2) :: Pulse, PulseR, PulseL  !for time i and i+1
      real (q), intent (in):: B_R, B_L
      complex (qc), allocatable:: Gstatic (:,:,:,:,:,:)
      complex (qc), allocatable:: Gbess (:,:,:,:,:,:)
@@ -561,27 +562,29 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! generate rates for this time i, and  next one i+1
      if (use_bessel) then
+          G(:,:,:,:,:) = (0,0) 
           fourire: do n=-n_max, n_max
           n_index = n+n_max+1      
           Pulse(1) = exp(-ui*cmplx(n,0)*(cmplx(time(i  ),0)*Freq_seq(1,1)+ Phase_seq(1)))
           Pulse(2) = exp(-ui*cmplx(n,0)*(cmplx(time(i+1),0)*Freq_seq(1,1)+ Phase_seq(1)))
-          G(:,:,:,:,1) = (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(1)
-          G(:,:,:,:,2) = (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(2)
+
+          G(:,:,:,:,1) = G(:,:,:,:,1) + (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(1)
+          G(:,:,:,:,2) = G(:,:,:,:,2) + (Gbess(:,:,:,:,1,n_index)+Gbess(:,:,:,:,2,n_index))*Pulse(2)
           
           enddo fourire
      else
         na= t_seq(i:i+1) ! index of the pulse interval that contains time (i)
-        print *, t_seq(i:i+1),n
+
 ! Pulse sequence
-          Pulse = 0._q
+          Pulse = (0,0)
         do m= 1, Nfreq
           !TODO: this could be writen in one line but not sure if it is more readable
           Pulse(1) = Pulse(1) + Amplitude (na(1),m)*cos(Freq_seq(na(1),m)*time(i)  +Phase_seq(na(1)))
           Pulse(2) = Pulse(2) + Amplitude (na(2),m)*cos(Freq_seq(na(2),m)*time(i+1)+Phase_seq(na(2)))
         enddo
      
-        PulseR = (1._q + Pulse*gamma_R_1/gamma_R_0)**2
-        PulseL = (1._q + Pulse*gamma_L_1/gamma_L_0)**2
+        PulseR = ((1,0) + Pulse*gamma_R_1/gamma_R_0)**2
+        PulseL = ((1,0) + Pulse*gamma_L_1/gamma_L_0)**2
 
 ! Add pulse on G, I first create a temporal value to add left and right electrode
 ! and then I crash the left and right G by the first and second times (ugly, I KNOW)
