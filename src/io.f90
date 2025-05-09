@@ -438,7 +438,7 @@ CONTAINS
    real (q) :: Temperature 
    real (q) :: gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1
    real (q) :: bias_R (:), bias_L (:), b_time (:)
-   real (q) :: tolerance, Cutoff, gammaC 
+   real (q) :: tolerance, Cutoff, gammaC
    logical :: runs
 
        t0(:)=t0(:)/time_unit; t1(:)=t1(:)/time_unit

@@ -199,16 +199,16 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
+     real (q) :: freq2meV = GHz/(2.*pi_d*time_unit)
      
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Calculate Contribution of Bessel functions
          
      ! TODO: check the generalization to multiple frequencies. 
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
-     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
-     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/(frequency*freq2meV))
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/(frequency*freq2meV))
      
      negative_bessel : do p = 0, p_max -1
           J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
@@ -320,7 +320,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
-     
+     real (q) :: freq2meV = GHz/(2.*pi_d*time_unit)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Calculate Contribution of Bessel functions
@@ -328,8 +328,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      ! TODO: check the generalization to multiple frequencies. 
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
-     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
-     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/(frequency*freq2meV))
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/(frequency*freq2meV))
      
      negative_bessel : do p = 0, p_max -1
           J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
