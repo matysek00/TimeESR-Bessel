@@ -215,7 +215,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
+     ! K(p) = J(p) + A(J(p-1)+ J(p+1))
      K_R = J_R(2:2*p_max) + 0.5 * Amplitude(1) * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
      K_L = J_L(2:2*p_max) + 0.5 * Amplitude(2) * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
 
@@ -242,11 +242,10 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           enddo lambda_v
           
           fermi: do p = 1, 2*p_max-2*n_max 
-!              WARNING: replace 0 with frequency
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
 
                fermiRB(p)  = fR  / pi_d
                ufermiRB(p) = ufR / pi_d
@@ -363,11 +362,11 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           enddo lambda_v
           
           fermi: do p = 1, 2*p_max-2*n_max 
-!              WARNING: replace 0 with frequency
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*0, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*0, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
 
                fermiRB(p)  = fR  / pi_d
                ufermiRB(p) = ufR / pi_d
