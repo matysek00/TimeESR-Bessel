@@ -191,33 +191,38 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fR, ufR, fL, ufL
 ! Only used in this subroutine
-     integer :: v, l, j, u, n, i, m, p, n_index
-     complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
+     integer :: v, l, j, u, n, i, m, p, n_index, p_ind
+     complex (qc), dimension(2*p_max-2*n_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
      complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
      complex (qc), dimension(2*p_max-1) :: K_L, K_R
      real (q), dimension(2*p_max+1) :: J_L, J_R
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
-     real (q) :: freq2meV = GHz/(2.*pi_d*time_unit)
      
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Calculate Contribution of Bessel functions
          
      ! TODO: check the generalization to multiple frequencies. 
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
-     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/(frequency*freq2meV))
-     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/(frequency*freq2meV))
+     J_R(p_max+1:) = Bessel_JN(0, p_max, gamma_R_0*B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, gamma_L_0*B_L/frequency)
+     
      
      negative_bessel : do p = 0, p_max -1
           J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A(J(p-1)+ J(p+1))
+     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
      K_R = J_R(2:2*p_max) + 0.5 * Amplitude(1) * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
      K_L = J_L(2:2*p_max) + 0.5 * Amplitude(2) * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
+     
+     !print *, B_L/frequency
+     !print *, J_L
+     !print *, K_L
 
      g0pa_up = 0.5 * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * gamma_R_0 * (1-Spin_polarization_R)
@@ -241,17 +246,23 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           enddo lambda_l
           enddo lambda_v
           
-          fermi: do p = 1, 2*p_max-2*n_max 
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+          !fermi: do p = n_max-p_max+1, p_max-n_max-1
+          !     p_ind = p+p_max-n_max
+          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+!
+          !     fermiRB(p_ind)  = fR  / pi_d
+          !     ufermiRB(p_ind) = ufR / pi_d
+          !     fermiLB(p_ind)  = fL  / pi_d
+          !     ufermiLB(p_ind) = ufL / pi_d
+          !enddo fermi
 
-               fermiRB(p)  = fR  / pi_d
-               ufermiRB(p) = ufR / pi_d
-               fermiLB(p)  = fL  / pi_d
-               ufermiLB(p) = ufL / pi_d
-          enddo fermi
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-n_max-2, Temperature, &
+                                             Cutoff, GammaC, N_int, fermiRB, ufermiRB)
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-n_max-2, Temperature, &
+                                             Cutoff, GammaC, N_int, fermiLB, ufermiLB)
 
           fourier_component: do n =-n_max,n_max
                n_index = n + n_max + 1
@@ -311,15 +322,15 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fR, ufR, fL, ufL
 ! Only used in this subroutine
-     integer :: v, l, j, u, n, i, m, p, n_index
-     complex (qc), dimension(2*p_max-2*n_max) :: fermiRB, fermiLB, ufermiRB, ufermiLB
+     integer :: v, l, j, u, n, i, m, p, n_index, p_ind
+     complex (qc), dimension(2*p_max-2*n_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
      complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
      complex (qc), dimension(2*p_max-1) :: K_L, K_R
      real (q), dimension(2*p_max+1) :: J_L, J_R
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
-     real (q) :: freq2meV = GHz/(2.*pi_d*time_unit)
+     
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Calculate Contribution of Bessel functions
@@ -327,17 +338,22 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      ! TODO: check the generalization to multiple frequencies. 
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
-     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/(frequency*freq2meV))
-     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/(frequency*freq2meV))
      
+     J_R(p_max+1:) = Bessel_JN(0, p_max, gamma_R_0*B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, gamma_L_0*B_L/frequency)
+
+     ! J(-p) = (-1)**p J(p) for p = 0,1,2,...
      negative_bessel : do p = 0, p_max -1
           J_L(p+1) = ((-1)**(p_max-p))*J_L(2*p_max+1-p)
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
+     ! K(p) = J(p) + .5*A*(J(p-1)+ J(p+1))
      K_L = J_L(2:2*p_max) + 0.5 * Amplitude * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
      K_R = J_R(2:2*p_max) + 0.5 * Amplitude * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
+     
+     !print *, J_L
+     !print *, K_L
 
      g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
@@ -361,18 +377,29 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           enddo lambda_l
           enddo lambda_v
           
-          fermi: do p = 1, 2*p_max-2*n_max 
+          !fermi: do p = n_max-p_max+1, p_max-n_max-1
+          !     p_ind = p+p_max-n_max
+          !     
+          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
+          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
+          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
+          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+!
+          !     fermiRB(p_ind)  = fR  / pi_d
+          !     ufermiRB(p_ind) = ufR / pi_d
+          !     fermiLB(p_ind)  = fL  / pi_d
+          !     ufermiLB(p_ind) = ufL / pi_d
+          !enddo fermi
 
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-               call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-               call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency*freq2meV, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-n_max-2, Temperature, &
+                                             Cutoff, GammaC, N_int, fermiRB, ufermiRB)
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-n_max-2, Temperature, &
+                                             Cutoff, GammaC, N_int, fermiLB, ufermiLB)
 
-               fermiRB(p)  = fR  / pi_d
-               ufermiRB(p) = ufR / pi_d
-               fermiLB(p)  = fL  / pi_d
-               ufermiLB(p) = ufL / pi_d
-          enddo fermi
+          fermiRB = fermiRB / pi_d
+          ufermiRB = ufermiRB / pi_d
+          fermiLB = fermiLB / pi_d
+          ufermiLB = ufermiLB / pi_d
 
           fourier_component: do n =-n_max,n_max
                n_index = n + n_max + 1
@@ -780,9 +807,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
       end if
     end function
 
-! TODO: ExtendedFermiIntegral and ExtenduFermiIntegral are always called together 
-!    are very silmilarfuntion. It should be possible to get fermi from 
-!    from ufermi at no cost. 
 ! Calculation of energy integration of rates involving the Fermi function
       subroutine ExtendedFermiIntegral ( D, V, T, Cutoff, GammaC, N,  fermiA)
       implicit none
@@ -834,5 +858,54 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
       return
       end subroutine ExtendeduFermiIntegral
 
+     ! TODO: ExtendedFermiIntegral and ExtenduFermiIntegral are always called together 
+!    are very silmilarfuntion. It should be possible to get fermi from 
+!    from ufermi at no cost. 
+    subroutine ExtendedFermiIntegralBessel ( D, frequency, V, p_max, T, Cutoff, GammaC, N,  fermiA, ufermiA)
+     implicit none
+     real (q) :: D, V, T, Cutoff, GammaC, frequency
+     real (q) :: e, step_e
+     integer :: i, N, p, p_max, p_ind
+     complex (qc), dimension(2*p_max+1):: fermiA, ufermiA
+     real (q), dimension(N) :: f
+     complex (qc) :: denom, udenom
+
+     ! calculate all fermi contributions they are the same for all integrals
+     step_e = 2*Cutoff/(N-1)/T
+     e= -(Cutoff + V)/T
      
+     fstep: do i = 1, N
+          e = e + step_e
+          f(i) = Fermi (e, 1._q)
+     enddo fstep
+     
+     step_e = 2*Cutoff/(N-1)
+     
+     ploop: do p = -p_max, p_max
+               p_ind = p+p_max+1
+               denom = ui*GammaC - D + p*frequency
+               udenom = D + p*frequency - ui*GammaC
+               
+               e = - Cutoff
+               fermiA(p_ind) = 0.5*f(1)/(e+denom)
+               ufermiA(p_ind) = 0.5*(1-f(1))/(e+udenom)   
+               
+               istep: do i = 2, N-1
+                    e= e + step_e
+                    fermiA(p_ind)=fermiA(p_ind) + f(i)/(e+denom)
+                    ufermiA(p_ind)=ufermiA(p_ind) + (1-f(i))/(e+udenom)
+               enddo istep
+               
+               e = Cutoff
+               fermiA(p_ind) = fermiA(p_ind) + 0.5*f(N)/(e+denom)
+               ufermiA(p_ind) = ufermiA(p_ind) + 0.5*(1-f(N))/(e+udenom)
+
+               fermiA(p_ind) = step_e*ui*fermiA(p_ind)
+               ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)
+
+     enddo ploop
+
+     return
+     end subroutine ExtendedFermiIntegralBessel
+
 end module QME

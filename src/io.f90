@@ -45,7 +45,7 @@ CONTAINS
               print *, ' '
               stop
          endif
-
+         print *, 0 
        read (unit_input, *)  ! separator
        read (unit_input,*) Ninterval ! Number of pulses (must contain zero pulses too)
        read (unit_input,*) Nfreq ! Maximum number of frequencies if it is a flat pulse
@@ -86,6 +86,7 @@ CONTAINS
      enddo
        read (unit_input,*) Phase_seq (n) ! phase shift in radians for interval n
    enddo
+    print *, 1
        read (unit_input, *)  ! separator
        read (unit_input, *) gamma_R_0 ! in meV : gamma_R_0= 2*pi*W_R_0*W_R_0*rho
        read (unit_input, *) gamma_L_0
@@ -96,6 +97,7 @@ CONTAINS
         read (unit_input, *) N_int ! Number of points in I11 and I21 (see Manual)
        read (unit_input, *)  ! separator
        read (unit_input, *) Nbias ! Number of bias pulses
+       print *, 2
        allocate (bias_R(Nbias), bias_L(Nbias), b_time(Nbias))
         do n = 1, Nbias
             read (unit_input, *) bias_R (n) ! mV right electrode
@@ -107,15 +109,15 @@ CONTAINS
        read (unit_input, *) Spin_polarization_L !  between -1 and 1
        read (unit_input, *) Electrode !  0 is left and 1 is right
        read (unit_input, *)  ! separator
-
+        print *, 3
        ! Bessel 
        read (unit_input, *) use_bessel ! Whether to use Bessel. 
-       read (unit_input, *) B_L ! strengt of cosine bias of the Electrode
        read (unit_input, *) B_R ! strengt of cosine bias of the Electrode
+       read (unit_input, *) B_L ! strengt of cosine bias of the Electrode
        read (unit_input, *) p_max ! maximum number of bessel to consider
        read (unit_input, *) n_max ! maximum number of frequencies to consider
        read (unit_input, *)  ! separator
-       
+       print *, 4
        ! output files
        read (unit_input, *) population ! .true. write POPULATIONS.dat
        read (unit_input, *) density_matrix ! .true. write RHO.dat
@@ -128,7 +130,7 @@ CONTAINS
        read (unit_input, *) spindyn !if .true. compute spin time evolution
        read (unit_input, *) redimension !if .true. reduce states to open plus a few closed channels
        read (unit_input, *) Nd  !new dimension
-
+        print *, 5
 ! Then gamma_R_1/gamma_R_0 is exactly "the driving"
        print *, ' '
        print *, ' The driving is:'
@@ -143,7 +145,7 @@ CONTAINS
 
        call atomic_units (t0, t1, t_initial, t_final, GammaC, Cutoff, &
          gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1,Temperature, bias_R, &
-         bias_L, b_time, Freq_seq, tolerance) ! Freq_seq transformed from frequency to radial freq
+         bias_L, b_time, Freq_seq, tolerance, B_R, B_L) ! Freq_seq transformed from frequency to radial freq
           
 
 ! Check everything is correct
@@ -425,7 +427,7 @@ CONTAINS
 
    subroutine atomic_units (t0, t1, t_initial, t_final, GammaC, Cutoff,&
          gamma_R_0, gamma_L_0, gamma_R_1, gamma_L_1,Temperature, bias_R, &
-         bias_L, b_time, Freq_seq, tolerance)
+         bias_L, b_time, Freq_seq, tolerance, B_R, B_L)
        implicit none
        integer, parameter :: q = SELECTED_REAL_KIND(10)
        real (q), parameter :: pi_d = 3.14159265358979323846_q
@@ -438,7 +440,8 @@ CONTAINS
    real (q) :: Temperature 
    real (q) :: gamma_R_0, gamma_R_1, gamma_L_0, gamma_L_1
    real (q) :: bias_R (:), bias_L (:), b_time (:)
-   real (q) :: tolerance, Cutoff, gammaC
+   real (q) :: tolerance, Cutoff, gammaC 
+   real (q) :: B_L, B_R
    logical :: runs
 
        t0(:)=t0(:)/time_unit; t1(:)=t1(:)/time_unit
@@ -453,6 +456,8 @@ CONTAINS
        bias_R = bias_R/Hartree
        bias_L = bias_L/Hartree
        b_time = b_time/time_unit
+       B_R = B_R/Hartree
+       B_L = B_L/Hartree
        Temperature = Temperature * 25.852_q / (Hartree*300._q)
        Freq_seq (:,:) = Freq_seq (:,:)*2.*pi_d*time_unit
 
