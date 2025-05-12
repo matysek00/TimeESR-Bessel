@@ -205,8 +205,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 !    Calculate Contribution of Bessel functions
          
      ! TODO: Turn this into a function K_alpha = getK(...)
-     J_R(p_max+1:) = Bessel_JN(0, p_max, gamma_R_0*B_R/frequency)
-     J_L(p_max+1:) = Bessel_JN(0, p_max, gamma_L_0*B_L/frequency)
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
      
      
      negative_bessel : do p = 0, p_max -1
@@ -320,8 +320,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      ! this should be one function called for L and R seperately
      ! calculate positive bessels
      
-     J_R(p_max+1:) = Bessel_JN(0, p_max, gamma_R_0*B_R/frequency)
-     J_L(p_max+1:) = Bessel_JN(0, p_max, gamma_L_0*B_L/frequency)
+     J_R(p_max+1:) = Bessel_JN(0, p_max, B_R/frequency)
+     J_L(p_max+1:) = Bessel_JN(0, p_max, B_L/frequency)
 
      ! J(-p) = (-1)**p J(p) for p = 0,1,2,...
      negative_bessel : do p = 0, p_max -1
