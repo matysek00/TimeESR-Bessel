@@ -377,11 +377,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-n_max-2, Temperature, &
                                              Cutoff, GammaC, N_int, fermiLB, ufermiLB)
 
-          fermiRB = fermiRB / pi_d
-          ufermiRB = ufermiRB / pi_d
-          fermiLB = fermiLB / pi_d
-          ufermiLB = ufermiLB / pi_d
-
           fourier_component: do n =-n_max,n_max
                n_index = n + n_max + 1
 
@@ -885,8 +880,8 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                fermiA(p_ind) = fermiA(p_ind) + 0.5*f(N)/(e+denom)
                ufermiA(p_ind) = ufermiA(p_ind) + 0.5*(1-f(N))/(e+udenom)
 
-               fermiA(p_ind) = step_e*ui*fermiA(p_ind)
-               ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)
+               fermiA(p_ind) = step_e*ui*fermiA(p_ind)/pi_d
+               ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)/pi_d
 
      enddo ploop
 
