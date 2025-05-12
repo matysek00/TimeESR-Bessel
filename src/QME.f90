@@ -204,9 +204,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Calculate Contribution of Bessel functions
          
-     ! TODO: check the generalization to multiple frequencies. 
-     ! this should be one function called for L and R seperately
-     ! calculate positive bessels
+     ! TODO: Turn this into a function K_alpha = getK(...)
      J_R(p_max+1:) = Bessel_JN(0, p_max, gamma_R_0*B_R/frequency)
      J_L(p_max+1:) = Bessel_JN(0, p_max, gamma_L_0*B_L/frequency)
      
@@ -216,13 +214,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           J_R(p+1) = ((-1)**(p_max-p))*J_R(2*p_max+1-p)
      enddo negative_bessel
 
-     ! K(p) = J(p) + A(J(p-1)e**(-iphi)+ J(p+1)e**(iphi))
+     ! K(p) = J(p) + A(J(p-1)+ J(p+1))
      K_R = J_R(2:2*p_max) + 0.5 * Amplitude(1) * (J_R(1:2*p_max-1) + J_R(3:2+p_max+1)) 
      K_L = J_L(2:2*p_max) + 0.5 * Amplitude(2) * (J_L(1:2*p_max-1) + J_L(3:2+p_max+1)) 
-     
-     !print *, B_L/frequency
-     !print *, J_L
-     !print *, K_L
 
      g0pa_up = 0.5 * gamma_R_0 * (1+Spin_polarization_R)
      g0pa_dn = 0.5 * gamma_R_0 * (1-Spin_polarization_R)
@@ -245,19 +239,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
                               lambda (j,u,2)*conjg(lambda(l,v,2))*g1pa_dn
           enddo lambda_l
           enddo lambda_v
-          
-          !fermi: do p = n_max-p_max+1, p_max-n_max-1
-          !     p_ind = p+p_max-n_max
-          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, fR)
-          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_R, Temperature, Cutoff, GammaC, N_int, ufR)
-          !     call ExtendedFermiIntegral  ( Delta(j,u)-p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, fL)
-          !     call ExtendeduFermiIntegral ( Delta(j,u)+p*frequency, bias_L, Temperature, Cutoff, GammaC, N_int, ufL)
-!
-          !     fermiRB(p_ind)  = fR  / pi_d
-          !     ufermiRB(p_ind) = ufR / pi_d
-          !     fermiLB(p_ind)  = fL  / pi_d
-          !     ufermiLB(p_ind) = ufL / pi_d
-          !enddo fermi
 
           call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-n_max-2, Temperature, &
                                              Cutoff, GammaC, N_int, fermiRB, ufermiRB)
@@ -858,9 +839,6 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
       return
       end subroutine ExtendeduFermiIntegral
 
-     ! TODO: ExtendedFermiIntegral and ExtenduFermiIntegral are always called together 
-!    are very silmilarfuntion. It should be possible to get fermi from 
-!    from ufermi at no cost. 
     subroutine ExtendedFermiIntegralBessel ( D, frequency, V, p_max, T, Cutoff, GammaC, N,  fermiA, ufermiA)
      implicit none
      real (q) :: D, V, T, Cutoff, GammaC, frequency
@@ -869,20 +847,27 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc), dimension(2*p_max+1):: fermiA, ufermiA
      real (q), dimension(N) :: f
      complex (qc) :: denom, udenom
-
+     ! I11_p = \int_{-Cutoff}^{Cutoff} dE f(E,V)/(E-D+p*frequency+ui\Gamma_C)
+     ! I21_p = \int_{-Cutoff}^{Cutoff} dE (1-f(E,V))/(E+D+p*frequency-ui\Gamma_C)
+     ! f(E,V) = \frac{1}{\exp(\beta (E-V)) + 1} Fermi distribution with V as fermi level
+     
+     ! TODO: the normal integrals could be included in this by setting p_max = 0
+     
      ! calculate all fermi contributions they are the same for all integrals
-     step_e = 2*Cutoff/(N-1)/T
+     step_e = 2*Cutoff/(N-1)/T ! rescaling with to units T = 1 
      e= -(Cutoff + V)/T
      
      fstep: do i = 1, N
           e = e + step_e
           f(i) = Fermi (e, 1._q)
      enddo fstep
-     
-     step_e = 2*Cutoff/(N-1)
+
+     step_e = 2*Cutoff/(N-1) ! now in atomic units
      
      ploop: do p = -p_max, p_max
                p_ind = p+p_max+1
+               
+               ! The constant part of the denominator 
                denom = ui*GammaC - D + p*frequency
                udenom = D + p*frequency - ui*GammaC
                
