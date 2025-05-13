@@ -276,7 +276,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: bessel_contributionR, ubessel_contributionR
      complex (qc) :: bessel_contributionL, ubessel_contributionL
      
-
+!    TODO: there shouuld be one one subroutine that returns G and GU for
+!        each electrode and deal with it on the spot.
+     
 !    Calculate Contribution of Bessel functions
 !    K(p) = J(p) + .5*A*(J(p-1)+ J(p+1))
      K_R = Bessel_K(B_R/frequency, Amplitude, p_max)
@@ -775,30 +777,28 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      step_e = 2*Cutoff/(N-1) ! now in atomic units
      
      ploop: do p = -p_max, p_max
-               p_ind = p+p_max+1
-               
-               ! The constant part of the denominator 
-               !denom =  - D + p*frequency + ui*GammaC
-               !udenom = D + p*frequency - ui*GammaC
-               denom = ui*GammaC - D 
-               udenom = D - ui*GammaC
+          p_ind = p+p_max+1
+          
+          ! The constant part of the denominator 
+          denom =  - D + p*frequency + ui*GammaC
+          udenom = D + p*frequency - ui*GammaC
 
-               e = - Cutoff
-               fermiA(p_ind) = 0.5*f(1)/(e+denom)
-               ufermiA(p_ind) = 0.5*(1-f(1))/(e+udenom)   
-               
-               istep: do i = 2, N-1
-                    e= e + step_e
-                    fermiA(p_ind)=fermiA(p_ind) + f(i)/(e+denom)
-                    ufermiA(p_ind)=ufermiA(p_ind) + (1-f(i))/(e+udenom)
-               enddo istep
-               
-               e = Cutoff
-               fermiA(p_ind) = fermiA(p_ind) + 0.5*f(N)/(e+denom)
-               ufermiA(p_ind) = ufermiA(p_ind) + 0.5*(1-f(N))/(e+udenom)
+          e = - Cutoff
+          fermiA(p_ind) = 0.5*f(1)/(e+denom)
+          ufermiA(p_ind) = 0.5*(1-f(1))/(e+udenom)   
+          
+          istep: do i = 2, N-1
+               e= e + step_e
+               fermiA(p_ind)=fermiA(p_ind) + f(i)/(e+denom)
+               ufermiA(p_ind)=ufermiA(p_ind) + (1-f(i))/(e+udenom)
+          enddo istep
+          
+          e = Cutoff
+          fermiA(p_ind) = fermiA(p_ind) + 0.5*f(N)/(e+denom)
+          ufermiA(p_ind) = ufermiA(p_ind) + 0.5*(1-f(N))/(e+udenom)
 
-               fermiA(p_ind) = step_e*ui*fermiA(p_ind)/pi_d
-               ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)/pi_d
+          fermiA(p_ind) = step_e*ui*fermiA(p_ind)/pi_d
+          ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)/pi_d
 
      enddo ploop
 
