@@ -190,7 +190,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: G (:,:,:,:,:,:)
 ! Only used in this subroutine
      integer :: v, l, j, u, n, n_index
-     complex (qc), dimension(2*p_max-2*n_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
+     complex (qc), dimension(2*p_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
      complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
      complex (qc), dimension(2*p_max-1) :: K_L, K_R
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
@@ -214,20 +214,20 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           call Orbital_overlaps(lambda, j, u, g0pa_up, g0pa_dn, Ndim, LvlujaR, LjulvaR)
           call Orbital_overlaps(lambda, j, u, g1pa_up, g1pa_dn, Ndim, LvlujaL, LjulvaL)
 
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-n_max-2, Temperature, &
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-1, Temperature, &
                                              Cutoff, GammaC, N_int, fermiRB, ufermiRB)
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-n_max-2, Temperature, &
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-1, Temperature, &
                                              Cutoff, GammaC, N_int, fermiLB, ufermiLB)
 
           fourier_component: do n =-n_max,n_max
                n_index = n + n_max + 1
 
 !              contribution of bessel functions
-!              sum_p K*_{p-n} K_p  I(p)                              
-!              sum_p K*_p K_{p+n}  uI(p)        
-               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n_max, n, &
+!              bessel_cont  = sum_p K*_{p-n} K_p  I(p)                              
+!              ubessel_cont = sum_p K*_p K_{p+n}  uI(p)        
+               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n, &
                                              bessel_contributionR, ubessel_contributionR)
-               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n_max, n, &
+               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n, &
                                              bessel_contributionL, ubessel_contributionL)
 
                level_v: do v=1,Ndim
@@ -269,7 +269,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      complex (qc) :: GC (:,:,:,:,:) ! for current
 ! Only used in this subroutine
      integer :: v, l, j, u, n, n_index
-     complex (qc), dimension(2*p_max-2*n_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
+     complex (qc), dimension(2*p_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
      complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
      complex (qc), dimension(2*p_max-1) :: K_L, K_R
      complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
@@ -296,9 +296,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           call Orbital_overlaps(lambda, j, u, g0pa_up, g0pa_dn, Ndim, LvlujaR, LjulvaR)
           call Orbital_overlaps(lambda, j, u, g1pa_up, g1pa_dn, Ndim, LvlujaL, LjulvaL)
           
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-n_max-2, Temperature, &
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-1, Temperature, &
                                              Cutoff, GammaC, N_int, fermiRB, ufermiRB)
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-n_max-2, Temperature, &
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-1, Temperature, &
                                              Cutoff, GammaC, N_int, fermiLB, ufermiLB)
 
           fourier_component: do n =-n_max,n_max
@@ -307,9 +307,9 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 !              contribution of bessel functions
 !              sum_p K*_{p-n} K_p  I(p)                              
 !              sum_p K*_p K_{p+n}  uI(p)        
-               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n_max, n, &
+               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n, &
                                              bessel_contributionR, ubessel_contributionR)
-               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n_max, n, &
+               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n, &
                                              bessel_contributionL, ubessel_contributionL)
 
                level_v: do v=1,Ndim
@@ -846,10 +846,10 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      return
      end subroutine Orbital_overlaps
 
-     subroutine compute_bessel_contribution(K, fermi, ufermi, p_max, n_max, n, result_bessel, result_ubessel)
-          integer, intent(in) :: p_max, n_max, n
-          complex (qc), intent(in), dimension(:) :: K
-          complex (qc), intent(in), dimension(:) :: fermi, ufermi
+     subroutine compute_bessel_contribution(K, fermi, ufermi, p_max, n, result_bessel, result_ubessel)
+          integer, intent(in) :: p_max, n
+          complex (qc), intent(in), dimension(2*p_max-1) :: K
+          complex (qc), intent(in), dimension(2*p_max-1) :: fermi, ufermi
           complex (qc), intent(out) :: result_bessel, result_ubessel
 
           integer :: p
@@ -858,9 +858,10 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 
           ! sum_p K*_{p-n} K_p  I(p)
           ! sum_p K*_p K_{p+n}  uI(p)
-          bessel: do p = n_max+1, 2*p_max-n_max-1
-               result_bessel  = result_bessel  + conjg(K(p-n)) * K(p)   * fermi(p)
-               result_ubessel = result_ubessel + conjg(K(p))   * K(p+n) * ufermi(p)
+          ! from p=1-p_max to p=p_max-1-n this assumes that for |p|>p_max K_p = 0
+          bessel: do p = 1, 2*p_max - 1 - n 
+               result_bessel  = result_bessel  + conjg(K(p)) * K(p+n) * fermi(p+n)
+               result_ubessel = result_ubessel + conjg(K(p)) * K(p+n) * ufermi(p)
           enddo bessel
 
           return
