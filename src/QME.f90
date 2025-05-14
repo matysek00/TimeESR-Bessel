@@ -448,28 +448,24 @@ end subroutine rates_Bes
 !
 ! Fermi occupation function with limitors to avoid underflow/overflows
 !
-    function Fermi (e, T)
+    function Fermi (e)
     
       implicit none
       real (q) :: Fermi
-      real (q), intent(in) :: e, T
-      real (q) :: beta
-      
-      Fermi = 0._q
-      beta = 0._q
-      
-      beta = 1._q / T
-      Fermi = beta * e
+      real (q), intent(in) :: e
+     
       if (e < -1000._q) then
-      	Fermi = 0._q
+      	Fermi = 1._q
       else
 #ifdef __UNDERANDOVER
+     Fermi = exp(e)
+
      ! Overflow errors possible here
-     if (exp(Fermi) > huge(0.0_q)) then
-       write(*,*) "Large Fermi value found for energy, temperature, value: ",e,T,exp(Fermi)
+     if (Fermi > huge(0.0_q)) then
+       write(*,*) "Large Fermi value found for energy, temperature, value: ", e, T, Fermi
      end if
 #endif
-        Fermi = exp(Fermi)
+        
       end if
       
       if (fermi > 1.0e30_q) then
@@ -501,7 +497,7 @@ end subroutine rates_Bes
      
      fstep: do i = 1, N
           e = e + step_e
-          f(i) = Fermi (e, 1._q)
+          f(i) = Fermi (e)
      enddo fstep
 
      step_e = 2*Cutoff/(N-1) ! now in atomic units
