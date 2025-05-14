@@ -858,12 +858,15 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
 
           ! sum_p K*_{p-n} K_p  I(p)
           ! sum_p K*_p K_{p+n}  uI(p)
-          ! from p=1-p_max to p=p_max-1-n this assumes that for |p|>p_max K_p = 0
-          bessel: do p = 1, 2*p_max - 1 - n 
+          ! assumes that for |p|>p_max K_p = 0 
+          ! for n<0 goes from p=1-p_max to p=p_max-1-n
+          ! for n>0 goes from p=1-p_max to p=p_max-1
+          ! thus p, p+n, p-n are all in the range 1-p_max to p_max-1
+          bessel: do p = max(1, 1-n), min(2*p_max-1, 2*p_max-n-1)
                result_bessel  = result_bessel  + conjg(K(p)) * K(p+n) * fermi(p+n)
                result_ubessel = result_ubessel + conjg(K(p)) * K(p+n) * ufermi(p)
           enddo bessel
-
+          
           return
      end subroutine compute_bessel_contribution
 
