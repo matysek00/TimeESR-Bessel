@@ -31,15 +31,29 @@ CONTAINS
       real (q), allocatable :: curr (:)
 ! internal
       integer :: l,j,u,n,m,np
+      complex (qc), allocatable ::  GB(:,:,:,:,:), uGB(:,:,:,:,:)
 
       allocate (curr (Ntime))
       allocate (GC(Ndim,Ndim,Ndim,Ndim,Nbias))
-
-
-            call  ratesC (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
-            Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-            Temperature, Electrode,  GC)
-
+      allocate (GB(Ndim,Ndim,Ndim,Ndim,Nbias))
+      allocate (uGB(Ndim,Ndim,Ndim,Ndim,Nbias))  
+      if (Electrode == 1) then
+            
+            call rates(Ndim, Nbias, lambda, gamma_R_0,  &
+                  Spin_polarization_R, fermiR_a, ufermiR_a, GB, uGB)
+      else if (Electrode == 0) then
+            call rates(Ndim, Nbias, lambda, gamma_L_0,  &
+                  Spin_polarization_L, fermiL_a, ufermiL_a, GB, uGB)
+      else
+            print *, "Electrode must be 0 or 1"
+            stop
+      end if      
+            
+      GC = GB - uGB
+      !call  ratesC (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
+      !      Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
+      !      Temperature, Electrode,  GC)
+            
       curr = 0._q
 
       do i = 1, Ntime
@@ -120,13 +134,13 @@ CONTAINS
       allocate (GB (Ndim,Ndim,Ndim,Ndim,2*n_max+1))
       allocate (uGB (Ndim,Ndim,Ndim,Ndim,2*n_max+1))
 
-      if (Electrode == 0) then
+      if (Electrode == 1) then
       effec_Amplitude = gamma_R_1/gamma_R_0
       call rates_Bes(Ndim, lambda, gamma_R_0, Spin_polarization_R, &
             n_max, p_max, B_R, effec_Amplitude, Freq_seq(1,1), &
             N_int, bias_R, Temperature, Cutoff, GammaC, Delta, GB, uGB)
 
-      else if (Electrode == 1) then
+      else if (Electrode == 0) then
       effec_Amplitude = gamma_L_1/gamma_L_0
       call rates_Bes(Ndim, lambda, gamma_L_0, Spin_polarization_L, &
             n_max, p_max, B_L, effec_Amplitude, Freq_seq(1,1), &

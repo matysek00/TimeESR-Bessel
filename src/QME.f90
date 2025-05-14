@@ -2,172 +2,47 @@ module QME
 Use declarations
 Use timer
 CONTAINS
-     subroutine rates (Ndim, NFreq, Ntime, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a,       &
-         ufermiR_a, ufermiL_a, Temperature, G)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! calculation of the QME rates
-! time dependent
-! for pulses that are either steps or cosine or a sequence of both
-     implicit none
-! Input:
-     complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature
-     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L
-     integer :: Ndim, Ntime, NFreq, Nbias
-! Output: the Rates called G (:,:,:,:,:,:) here
-     complex (qc) :: G (:,:,:,:,:,:) ! for QME
-! Computed in ExtendedFermiIntegral
-     complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
-     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
-     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
-! Only used in this subroutine
-     integer :: v, l, j, u, n
-     complex (qc) :: g0p_up, g0m_up, g1p_up, g1m_up
-     complex (qc) :: g0p_dn, g0m_dn, g1p_dn, g1m_dn, pulse
-     complex (qc) :: Lvluj, Ljulv
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-     do n=1,Nbias
-     do j=1,Ndim
-     do u=1,Ndim
-
-      fermiR = fermiR_a(j,u,n)
-      fermiL = fermiL_a(j,u,n)
-      ufermiR = ufermiR_a(j,u,n)
-      ufermiL = ufermiL_a(j,u,n)
-      
-! Right electrode
-      
-      g0p_up = gamma_R_0*fermiR*(1+Spin_polarization_R)*0.5
-      g0m_up = gamma_R_0*ufermiR*(1+Spin_polarization_R)*0.5
-      g0p_dn = gamma_R_0*fermiR*(1-Spin_polarization_R)*0.5
-      g0m_dn = gamma_R_0*ufermiR*(1-Spin_polarization_R)*0.5
-
-! Left electrode
-      g1p_up = gamma_L_0*fermiL*(1+Spin_polarization_L)*0.5
-      g1m_up = gamma_L_0*ufermiL*(1+Spin_polarization_L)*0.5
-      g1p_dn = gamma_L_0*fermiL*(1-Spin_polarization_L)*0.5
-      g1m_dn = gamma_L_0*ufermiL*(1-Spin_polarization_L)*0.5
-
-        do v=1,Ndim
-        do l=1,Ndim
-            Lvluj = lambda (v,l,1)*conjg(lambda(u,j,1))*g0p_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g0p_dn
-            Ljulv = lambda (j,u,1)*conjg(lambda(l,v,1))*g0m_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g0m_dn
-
-! Right electrode
-            G (v,l,j,u,1,n) = 0.5*(Lvluj + Ljulv)
-
-            Lvluj = lambda (v,l,1)*conjg(lambda(u,j,1))*g1p_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g1p_dn
-            Ljulv = lambda (j,u,1)*conjg(lambda(l,v,1))*g1m_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g1m_dn
-
-! Left electrode
-            G (v,l,j,u,2,n) = 0.5*(Lvluj + Ljulv)
-            
-            !if(write_rates) write(666,*) v, l, j, u, n, G(v,l,j,u,1,n)*Hartree/GHz, G(v,l,j,u,2,n)*Hartree/GHz
-        enddo
-        enddo
-      enddo
-     enddo
-     enddo
-
-     return
-
-     end subroutine rates 
-!    TODO: GC(v,l,j,u,n) = Electrode*G(v,l,j,u,1,n) + (1-Electrode)*G(v,l,j,u,2,n)
-!         I don't think that ratesC functions should exist. 
-
-!
-! For the Current NOW
-!
-
-subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-     Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a, ufermiR_a, ufermiL_a, &
-     Temperature, Electrode,  GC)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! calculation of the QME rates
-! time dependent
-! for pulses that are either steps or cosine or a sequence of both
-     implicit none
-! Input:
-     complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature
-     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L
-     integer :: Ndim, NFreq, Nbias
-     integer :: Electrode
-! Output: the Rates called GC (:,:,:,:,:) here
-     complex (qc) :: GC (:,:,:,:,:) ! for current
-! Computed in ExtendedFermiIntegral
-     complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
-     complex (qc) :: fermiR_a(:,:,:), fermiL_a(:,:,:)
-     complex (qc) :: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
-! Only used in this subroutine
-     integer :: v, l, j, u, n, i, m
-     complex (qc) :: g0pa_up, g0ma_up, g1pa_up, g1ma_up
-     complex (qc) :: g0pa_dn, g0ma_dn, g1pa_dn, g1ma_dn
-     complex (qc) :: Lvluja, Ljulva
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+     subroutine rates (Ndim, Nbias, lambda, gamma_0,  &
+          Spin_polarization, fermi_a, ufermi_a, G, uG)
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! calculation of the QME rates
+     ! time dependent
+     ! for pulses that are either steps or cosine or a sequence of both
+          implicit none
+     ! Input:
+          integer, intent(in) :: Ndim, Nbias
+          complex (qc), intent (in), dimension(Ndim, Ndim, 2):: lambda
+          complex (qc), intent(in), dimension(Ndim, Ndim, Nbias) :: fermi_a, ufermi_a
+          real (q), intent (in):: gamma_0, Spin_polarization
           
-     do n =1,Nbias
-     do j=1,Ndim
-     do u=1,Ndim
-
-! Static contribution
-! Speed up if we create a Fermi array, we leave it as a function
-! but it slows down the code (only two evaluation per pair u,j )
-
-
-     fermiR = fermiR_a(j,u,n)
-     fermiL = fermiL_a(j,u,n)
-     ufermiR = ufermiR_a(j,u,n)
-     ufermiL = ufermiL_a(j,u,n)
-     
-
-!Right electrode
-     g0pa_up = Electrode*gamma_R_0*fermiR*(1+Spin_polarization_R)*0.5
-     g0ma_up = Electrode*gamma_R_0*ufermiR*(1+Spin_polarization_R)*0.5
-     g0pa_dn = Electrode*gamma_R_0*fermiR*(1-Spin_polarization_R)*0.5
-     g0ma_dn = Electrode*gamma_R_0*ufermiR*(1-Spin_polarization_R)*0.5
-
-! Left electrode
-     g1pa_up = (1-Electrode)*gamma_L_0*fermiL*(1+Spin_polarization_L)*0.5
-     g1ma_up = (1-Electrode)*gamma_L_0*ufermiL*(1+Spin_polarization_L)*0.5
-     g1pa_dn = (1-Electrode)*gamma_L_0*fermiL*(1-Spin_polarization_L)*0.5
-     g1ma_dn = (1-Electrode)*gamma_L_0*ufermiL*(1-Spin_polarization_L)*0.5
-
-     do v=1,Ndim
-     do l=1,Ndim
-
-!Right electrode
-          Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g0pa_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g0pa_dn
-          Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g0ma_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g0ma_dn
-
-          GC (v,l,j,u,n) = 0.5*(Lvluja - Ljulva)
-
-! Left electrode
-          Lvluja = lambda (v,l,1)*conjg(lambda(u,j,1))*g1pa_up+  &
-                    lambda (v,l,2)*conjg(lambda(u,j,2))*g1pa_dn
-          Ljulva = lambda (j,u,1)*conjg(lambda(l,v,1))*g1ma_up+  &
-                    lambda (j,u,2)*conjg(lambda(l,v,2))*g1ma_dn
+     ! Output: the Rates called GC (:,:,:,:,:) here
+          complex (qc), intent(out), dimension(Ndim, Ndim, Ndim, Ndim, Nbias):: G, uG
           
-          GC (v,l,j,u,n) = GC (v,l,j,u,n) + 0.5*(Lvluja - Ljulva) ! This has the right admixture of electrodes
-
-     enddo
-     enddo
-     enddo
-     enddo
-     enddo
+     ! Only used in this subroutine
+          integer :: j, u, n 
+          complex (qc) :: g_up, g_dn
+          complex (qc), dimension(Ndim, Ndim) :: Lvluja, Ljulva
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      
-     return
- 
-     end subroutine ratesC 
+          g_up = 0.5 * gamma_0 * (1+Spin_polarization)
+          g_dn = 0.5 * gamma_0 * (1-Spin_polarization)
+
+          do n =1,Nbias
+          do j=1,Ndim
+          do u=1,Ndim
+
+               call Orbital_overlaps(lambda, j, u, g_up, g_dn, Ndim, Lvluja, Ljulva)
+               G (:,:,j,u,n) = 0.5*Lvluja*fermi_a(j,u,n)
+               uG (:,:,j,u,n) = 0.5*Ljulva*ufermi_a(j,u,n)
+
+          enddo
+          enddo
+          enddo
+          
+          return
+      
+          end subroutine rates
 
 
 subroutine rates_Bes(Ndim, lambda, gamma_0, Spin_polarization, &
@@ -210,14 +85,9 @@ subroutine rates_Bes(Ndim, lambda, gamma_0, Spin_polarization, &
                call compute_bessel_contribution(K, fermiB, ufermiB, p_max, n, &
                               bessel_contribution, ubessel_contribution)
 
-               level_v: do v=1,Ndim
-               level_l: do l=1, Ndim
+               G (:,:,j,u,n_index)  = 0.5 * Lvluja * bessel_contribution
+               uG (:,:,j,u,n_index) = 0.5 * Ljulva * ubessel_contribution
                
-                    G (v,l,j,u,n_index) = 0.5*Lvluja(v,l)*bessel_contribution
-                    uG (v,l,j,u,n_index) = 0.5*Ljulva(v,l)*ubessel_contribution
-               
-               enddo level_l
-               enddo level_v
 
           enddo fourier_component 
      enddo level_u
@@ -352,33 +222,34 @@ end subroutine rates_Bes
           
           deallocate (GB, uGB)
 
-          !call rates_bessel(Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-          !     Spin_polarization_R, Spin_polarization_L, p_max, B_R, B_L,  &
-          !     effec_Amplitude, Freq_seq(1,1), bias_R(1), bias_L(1), &
-          !     Temperature, Electrode, Gbess) 
      else
 ! Bias intergal
-     allocate (Gstatic(Ndim,Ndim,Ndim,Ndim,2,Nbias))
      do n = 1, Nbias
 ! I11 and I21 from the Manual are honored here:
      do j=1,Ndim
      do u=1,Ndim
-      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_R(n), 0, Temperature, Cutoff, GammaC, N_int,  fermiR, ufermiR)
-      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_L(n), 0, Temperature, Cutoff, GammaC, N_int,  fermiL, ufermiL)
-
-      fermiR_a(j,u,n) = fermiR(1)  / pi_d !important pi factor, see Manual
-      fermiL_a(j,u,n) = fermiL(1) / pi_d
-      ufermiR_a(j,u,n) = ufermiR(1) / pi_d
-      ufermiL_a(j,u,n) = ufermiL(1) / pi_d
+      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_R(n), 0, &
+          Temperature, Cutoff, GammaC, N_int,  fermiR_a(j,u,n), ufermiR_a(j,u,n))
+      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_L(n), 0, &
+          Temperature, Cutoff, GammaC, N_int,  fermiL_a(j,u,n), ufermiL_a(j,u,n))
 
      enddo
      enddo
      enddo
+          allocate (Gstatic(Ndim,Ndim,Ndim,Ndim,2,Nbias))
+          allocate (GB(Ndim,Ndim,Ndim,Ndim,Nbias))
+          allocate (uGB(Ndim,Ndim,Ndim,Ndim,Nbias))  
 
-     
-       call rates (Ndim, NFreq, Ntime, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, fermiR_a, fermiL_a,   &
-         ufermiR_a, ufermiL_a, Temperature, Gstatic)
+          call rates(Ndim, Nbias, lambda, gamma_R_0,  &
+               Spin_polarization_R, fermiR_a, ufermiR_a, GB, uGB)
+          Gstatic (:,:,:,:,1,:) = GB(:,:,:,:,:)+uGB(:,:,:,:,:)
+
+          call rates(Ndim, Nbias, lambda, gamma_L_0,  &
+               Spin_polarization_L, fermiL_a, ufermiL_a, GB, uGB)
+          Gstatic (:,:,:,:,2,:) = GB(:,:,:,:,:)+uGB(:,:,:,:,:)
+          
+          deallocate (GB, uGB)
+   
      endif
 
 ! loop on time
@@ -685,20 +556,20 @@ end subroutine rates_Bes
      return
      end function Bessel_K
 
-     subroutine Orbital_overlaps (lambda, j, u, gpa_up, gpa_dn, Ndim, overlapvluj, overlapjulv)
+     subroutine Orbital_overlaps (lambda, j, u, g_up, g_dn, Ndim, overlapvluj, overlapjulv)
      implicit none
      integer, intent(in):: Ndim, j, u
      complex (qc), dimension(Ndim, Ndim, 2), intent (in) :: lambda 
-     complex (qc), intent (in) :: gpa_up, gpa_dn
+     complex (qc), intent (in) :: g_up, g_dn
      complex (qc), dimension(Ndim, Ndim), intent (out) :: overlapvluj, overlapjulv
      integer :: v, l
 
           level_v: do v=1,Ndim
           level_l: do l=1, Ndim
-               overlapvluj(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*gpa_up+  &
-                              lambda (v,l,2)*conjg(lambda(u,j,2))*gpa_dn
-               overlapjulv(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*gpa_up+  &
-                              lambda (j,u,2)*conjg(lambda(l,v,2))*gpa_dn
+               overlapvluj(v,l) = lambda (v,l,1)*conjg(lambda(u,j,1))*g_up+  &
+                              lambda (v,l,2)*conjg(lambda(u,j,2))*g_dn
+               overlapjulv(v,l) = lambda (j,u,1)*conjg(lambda(l,v,1))*g_up+  &
+                              lambda (j,u,2)*conjg(lambda(l,v,2))*g_dn
           enddo level_l
           enddo level_v
 
