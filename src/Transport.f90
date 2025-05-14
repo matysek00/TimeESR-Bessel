@@ -111,21 +111,40 @@ CONTAINS
      real (q), allocatable :: curr (:)
 ! internal
       integer :: l,j,u,n,m,np,i,n_index
-      complex (qc), allocatable ::  GC (:,:,:,:,:)
+      complex (qc), allocatable ::  GC(:,:,:,:,:), GB(:,:,:,:,:), uGB(:,:,:,:,:)
       complex (qc) :: tdep, exponent
       real (q) :: effec_Amplitude
 
       allocate (curr (Ntime))
-      allocate (GC(Ndim,Ndim,Ndim,Ndim,2*n_max+1))
-      
+      allocate (GC (Ndim,Ndim,Ndim,Ndim, 2*n_max+1))
+      allocate (GB (Ndim,Ndim,Ndim,Ndim,2*n_max+1))
+      allocate (uGB (Ndim,Ndim,Ndim,Ndim,2*n_max+1))
+
+      if (Electrode == 0) then
+      effec_Amplitude = gamma_R_1/gamma_R_0
+      call rates_Bes(Ndim, lambda, gamma_R_0, Spin_polarization_R, &
+            n_max, p_max, B_R, effec_Amplitude, Freq_seq(1,1), &
+            N_int, bias_R, Temperature, Cutoff, GammaC, Delta, GB, uGB)
+
+      else if (Electrode == 1) then
+      effec_Amplitude = gamma_L_1/gamma_L_0
+      call rates_Bes(Ndim, lambda, gamma_L_0, Spin_polarization_L, &
+            n_max, p_max, B_L, effec_Amplitude, Freq_seq(1,1), &
+            N_int, bias_L, Temperature, Cutoff, GammaC, Delta, GB, uGB)
+      else
+            print *, "Electrode must be 0 or 1"
+            stop
+      end if
+
+      GC = GB - uGB
       effec_Amplitude = Amplitude(1,1)*((1-Electrode)*gamma_L_1/gamma_L_0 + &
                                           Electrode*gamma_R_1/gamma_R_0)
-
-      call ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
-            Spin_polarization_R, Spin_polarization_L, &
-            p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L, &
-            Temperature, Electrode,  GC)       
-
+      
+      !call ratesC_bessel (Ndim, NFreq, Nbias,lambda, gamma_R_0, gamma_L_0,  &
+      !      Spin_polarization_R, Spin_polarization_L, &
+      !      p_max, B_R, B_L, effec_Amplitude, Freq_seq(1,1), bias_R, bias_L, &
+      !      Temperature, Electrode,  GC)       
+!
       curr = 0._q
       fourire: do n=-n_max, n_max
       timeloop: do i = 1, Ntime

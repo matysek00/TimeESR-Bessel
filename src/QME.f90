@@ -169,6 +169,63 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
  
      end subroutine ratesC 
 
+
+subroutine rates_Bes(Ndim, lambda, gamma_0, Spin_polarization, &
+          n_max, p_max, B, Amplitude, frequency, &
+          N_int, bias, Temperature, Cutoff, GammaC, Delta, G, uG)
+     
+     integer, intent(in) :: Ndim, p_max, N_int, n_max     
+     real (q), intent (in) :: B, Amplitude, frequency
+     real (q), intent (in) :: Spin_polarization, gamma_0
+     real (q), intent (in) :: Temperature, Cutoff, GammaC, bias
+     real(q), intent (in), dimension(Ndim, Ndim) :: Delta 
+     complex(qc), intent (in), dimension(Ndim, Ndim, 2) :: lambda 
+
+     complex (qc), intent(out), dimension(Ndim, Ndim, Ndim, Ndim, n_max) ::  G, uG 
+
+     complex (qc) :: gpa_up, gpa_dn, bessel_contribution, ubessel_contribution
+     complex (qc), dimension(2*p_max-1) :: fermiB, ufermiB, K
+     complex (qc), dimension(Ndim,Ndim) :: Lvluja, Ljulva
+     integer :: j, u, v, l, n, n_index
+     
+!    Calculate Contribution of Bessel functions
+!    K(p) = J(p) + .5*A*(J(p-1)+ J(p+1))
+     K = Bessel_K(B/frequency, Amplitude, p_max)
+
+     gpa_up = 0.5 * gamma_0 * (1+Spin_polarization)
+     gpa_dn = 0.5 * gamma_0 * (1-Spin_polarization)
+
+     level_j: do j=1,Ndim
+     level_u: do u=1,Ndim
+          call Orbital_overlaps(lambda, j, u, gpa_up, gpa_dn, Ndim, Lvluja, Ljulva)
+          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias, p_max-1, Temperature, &
+                                             Cutoff, GammaC, N_int, fermiB, ufermiB)
+
+          fourier_component: do n =-n_max,n_max
+               n_index = n + n_max + 1
+
+!              contribution of bessel functions
+!              bessel_cont  = sum_p K*_{p-n} K_p  I(p)                              
+!              ubessel_cont = sum_p K*_p K_{p+n}  uI(p) 
+               call compute_bessel_contribution(K, fermiB, ufermiB, p_max, n, &
+                              bessel_contribution, ubessel_contribution)
+
+               level_v: do v=1,Ndim
+               level_l: do l=1, Ndim
+               
+                    G (v,l,j,u,n_index) = 0.5*Lvluja(v,l)*bessel_contribution
+                    uG (v,l,j,u,n_index) = 0.5*Ljulva(v,l)*ubessel_contribution
+               
+               enddo level_l
+               enddo level_v
+
+          enddo fourier_component 
+     enddo level_u
+     enddo level_j
+     
+end subroutine rates_Bes
+
+
      subroutine rates_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
          Spin_polarization_R, Spin_polarization_L, &
          p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L,&
@@ -406,6 +463,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      real (q), intent (in):: B_R, B_L
      complex (qc), allocatable:: Gstatic (:,:,:,:,:,:)
      complex (qc), allocatable:: Gbess (:,:,:,:,:,:)
+     complex (qc), allocatable:: GB (:,:,:,:,:), uGB (:,:,:,:,:)
      complex (qc), allocatable:: G (:,:,:,:,:)
      complex (qc) :: rho (:,:,:)
      complex (qc) :: Temp1, Temp2 !buffers for changing names...
@@ -416,7 +474,7 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      real (q), intent (in):: Amplitude (:,:) ! sequence of pulses
      real (q), intent (in):: Freq_seq (:,:) ! sequence of pulses
      real (q), intent (in):: Phase_seq (:) ! sequence of pulses
-     real (q), dimension(2) :: effec_Amplitude
+     real (q) :: effec_Amplitude
 ! Computed in ExtendedFermiIntegral
      complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
      complex (qc), allocatable:: fermiR_a(:,:,:), fermiL_a(:,:,:)
@@ -438,14 +496,28 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
      
      if (use_bessel) then
           allocate (Gbess(Ndim,Ndim,Ndim,Ndim,2,n_max*2+1))
-          ! TODO: the amplitude is wrong here
-          effec_Amplitude(1) = Amplitude(1,1)*gamma_R_1/gamma_R_0
-          effec_Amplitude(2) = Amplitude(1,1)*gamma_L_1/gamma_L_0     
+          allocate (GB(Ndim,Ndim,Ndim,Ndim,n_max*2+1))
+          allocate (uGB(Ndim,Ndim,Ndim,Ndim,n_max*2+1))
 
-          call rates_bessel(Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-               Spin_polarization_R, Spin_polarization_L, p_max, B_R, B_L,  &
-               effec_Amplitude, Freq_seq(1,1), bias_R(1), bias_L(1), &
-               Temperature, Electrode, Gbess) 
+          effec_Amplitude = Amplitude(1,1)*gamma_R_1/gamma_R_0
+          call rates_Bes(Ndim, lambda, gamma_R_0, Spin_polarization_R, &
+               n_max, p_max, B_R, effec_Amplitude, Freq_seq(1,1), &
+               N_int, bias_R(1), Temperature, Cutoff, GammaC, Delta, GB, uGB)
+          
+          Gbess(:,:,:,:,1,:) = GB(:,:,:,:,:)+uGB(:,:,:,:,:)
+          
+          effec_Amplitude = Amplitude(1,1)*gamma_L_1/gamma_L_0     
+          call rates_Bes(Ndim, lambda, gamma_L_0, Spin_polarization_L, &
+               n_max, p_max, B_L, effec_Amplitude, Freq_seq(1,1), &
+               N_int, bias_L(1), Temperature, Cutoff, GammaC, Delta, GB, uGB)
+          Gbess(:,:,:,:,2,:) = GB(:,:,:,:,:)+uGB(:,:,:,:,:)
+          
+          deallocate (GB, uGB)
+
+          !call rates_bessel(Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
+          !     Spin_polarization_R, Spin_polarization_L, p_max, B_R, B_L,  &
+          !     effec_Amplitude, Freq_seq(1,1), bias_R(1), bias_L(1), &
+          !     Temperature, Electrode, Gbess) 
      else
 ! Bias intergal
      allocate (Gstatic(Ndim,Ndim,Ndim,Ndim,2,Nbias))
@@ -855,15 +927,18 @@ subroutine ratesC (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
           integer :: p
           result_bessel = 0.0_qc 
           result_ubessel = 0.0_qc
-
+          
           ! sum_p K*_{p-n} K_p  I(p)
           ! sum_p K*_p K_{p+n}  uI(p)
-          ! from p=1-p_max to p=p_max-1-n this assumes that for |p|>p_max K_p = 0
-          bessel: do p = 1, 2*p_max - 1 - n 
+          ! assumes that for |p|>p_max K_p = 0 
+          ! for n<0 goes from p=1-p_max to p=p_max-1-n
+          ! for n>0 goes from p=1-p_max to p=p_max-1
+          ! thus p, p+n, p-n are all in the range 1-p_max to p_max-1
+          bessel: do p = max(1, 1-n), min(2*p_max-1, 2*p_max-n-1)
                result_bessel  = result_bessel  + conjg(K(p)) * K(p+n) * fermi(p+n)
                result_ubessel = result_ubessel + conjg(K(p)) * K(p+n) * ufermi(p)
           enddo bessel
-
+          
           return
      end subroutine compute_bessel_contribution
 
