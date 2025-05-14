@@ -198,7 +198,7 @@ subroutine rates_Bes(Ndim, lambda, gamma_0, Spin_polarization, &
      level_j: do j=1,Ndim
      level_u: do u=1,Ndim
           call Orbital_overlaps(lambda, j, u, gpa_up, gpa_dn, Ndim, Lvluja, Ljulva)
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias, p_max-1, Temperature, &
+          call ExtendedFermiIntegral (Delta(j,u), frequency, bias, p_max-1, Temperature, &
                                              Cutoff, GammaC, N_int, fermiB, ufermiB)
 
           fourier_component: do n =-n_max,n_max
@@ -225,168 +225,6 @@ subroutine rates_Bes(Ndim, lambda, gamma_0, Spin_polarization, &
      
 end subroutine rates_Bes
 
-
-     subroutine rates_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, &
-         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L,&
-         Temperature, Electrode,  G)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! calculation of the QME rates
-! time dependent
-! for pulses that are either steps or cosine or a sequence of both
-     implicit none
-! Input:
-     complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency
-     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
-     real (q), intent (in):: bias_R , bias_L 
-     real (q), intent (in), dimension(2) :: Amplitude
-     integer :: Ndim, NFreq, Nbias, p_max
-     integer :: Electrode
-! Output: the Rates called GC (:,:,:,:,:) here
-     complex (qc) :: G (:,:,:,:,:,:)
-! Only used in this subroutine
-     integer :: v, l, j, u, n, n_index
-     complex (qc), dimension(2*p_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
-     complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
-     complex (qc), dimension(2*p_max-1) :: K_L, K_R
-     complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
-     complex (qc) :: bessel_contributionR, ubessel_contributionR
-     complex (qc) :: bessel_contributionL, ubessel_contributionL
-
-!    Calculate Contribution of Bessel functions
-!    K(p) = J(p) + .5*A*(J(p-1)+ J(p+1))
-     K_R = Bessel_K(B_R/frequency, Amplitude(1), p_max)
-     K_L = Bessel_K(B_L/frequency, Amplitude(2), p_max)
-
-     g0pa_up = 0.5 * gamma_R_0 * (1+Spin_polarization_R)
-     g0pa_dn = 0.5 * gamma_R_0 * (1-Spin_polarization_R)
-     g1pa_up = 0.5 * gamma_L_0 * (1+Spin_polarization_L)
-     g1pa_dn = 0.5 * gamma_L_0 * (1-Spin_polarization_L)
-
-     level_j: do j=1,Ndim
-     level_u: do u=1,Ndim
-
-!         Precalculate orbital overlaps          
-          call Orbital_overlaps(lambda, j, u, g0pa_up, g0pa_dn, Ndim, LvlujaR, LjulvaR)
-          call Orbital_overlaps(lambda, j, u, g1pa_up, g1pa_dn, Ndim, LvlujaL, LjulvaL)
-
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-1, Temperature, &
-                                             Cutoff, GammaC, N_int, fermiRB, ufermiRB)
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-1, Temperature, &
-                                             Cutoff, GammaC, N_int, fermiLB, ufermiLB)
-
-          fourier_component: do n =-n_max,n_max
-               n_index = n + n_max + 1
-
-!              contribution of bessel functions
-!              bessel_cont  = sum_p K*_{p-n} K_p  I(p)                              
-!              ubessel_cont = sum_p K*_p K_{p+n}  uI(p)        
-               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n, &
-                                             bessel_contributionR, ubessel_contributionR)
-               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n, &
-                                             bessel_contributionL, ubessel_contributionL)
-
-               level_v: do v=1,Ndim
-               level_l: do l=1, Ndim
-               
-               G (v,l,j,u,1,n_index) = 0.5*( LvlujaR(v,l) * bessel_contributionR + &
-                                             LjulvaR(v,l) * ubessel_contributionR)
-               G (v,l,j,u,2,n_index) = 0.5*( LvlujaL(v,l) * bessel_contributionL + &
-                                             LjulvaL(v,l) * ubessel_contributionL)
-                                             
-               enddo level_l
-               enddo level_v
-          enddo fourier_component
-     enddo level_u
-     enddo level_j
-         
-     return
-
-     end subroutine rates_bessel 
-
-
-     subroutine ratesC_bessel (Ndim, NFreq, Nbias, lambda, gamma_R_0, gamma_L_0,  &
-         Spin_polarization_R, Spin_polarization_L, &
-         p_max, B_R, B_L, Amplitude, frequency, bias_R, bias_L,&
-         Temperature, Electrode,  GC)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! calculation of the QME rates
-! time dependent
-! for pulses that are either steps or cosine or a sequence of both
-     implicit none
-! Input:
-     complex (qc), intent (in):: lambda (:,:,:)
-     real (q), intent (in):: gamma_R_0, gamma_L_0, Temperature, frequency, Amplitude
-     real (q), intent (in):: Spin_polarization_R, Spin_polarization_L, B_L, B_R
-     real (q), intent (in):: bias_R , bias_L 
-     integer :: Ndim, NFreq, Nbias, p_max
-     integer :: Electrode
-! Output: the Rates called GC (:,:,:,:,:) here
-     complex (qc) :: GC (:,:,:,:,:) ! for current
-! Only used in this subroutine
-     integer :: v, l, j, u, n, n_index
-     complex (qc), dimension(2*p_max-1) :: fermiRB, fermiLB, ufermiRB, ufermiLB
-     complex (qc), dimension(Ndim,Ndim) :: LvlujaL, LjulvaL, LvlujaR, LjulvaR
-     complex (qc), dimension(2*p_max-1) :: K_L, K_R
-     complex (qc) :: g0pa_up, g1pa_up, g0pa_dn, g1pa_dn
-     complex (qc) :: bessel_contributionR, ubessel_contributionR
-     complex (qc) :: bessel_contributionL, ubessel_contributionL
-     
-!    TODO: there shouuld be one one subroutine that returns G and GU for
-!        each electrode and deal with it on the spot.
-     
-!    Calculate Contribution of Bessel functions
-!    K(p) = J(p) + .5*A*(J(p-1)+ J(p+1))
-     K_R = Bessel_K(B_R/frequency, Amplitude, p_max)
-     K_L = Bessel_K(B_L/frequency, Amplitude, p_max)
-
-     g0pa_up = 0.5 * Electrode     * gamma_R_0 * (1+Spin_polarization_R)
-     g0pa_dn = 0.5 * Electrode     * gamma_R_0 * (1-Spin_polarization_R)
-     g1pa_up = 0.5 * (1-Electrode) * gamma_L_0 * (1+Spin_polarization_L)
-     g1pa_dn = 0.5 * (1-Electrode) * gamma_L_0 * (1-Spin_polarization_L)
-
-     level_j: do j=1,Ndim
-     level_u: do u=1,Ndim
-
-!         Precalculate orbital overlaps
-          call Orbital_overlaps(lambda, j, u, g0pa_up, g0pa_dn, Ndim, LvlujaR, LjulvaR)
-          call Orbital_overlaps(lambda, j, u, g1pa_up, g1pa_dn, Ndim, LvlujaL, LjulvaL)
-          
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_R, p_max-1, Temperature, &
-                                             Cutoff, GammaC, N_int, fermiRB, ufermiRB)
-          call ExtendedFermiIntegralBessel (Delta(j,u), frequency, bias_L, p_max-1, Temperature, &
-                                             Cutoff, GammaC, N_int, fermiLB, ufermiLB)
-
-          fourier_component: do n =-n_max,n_max
-               n_index = n + n_max + 1
-
-!              contribution of bessel functions
-!              sum_p K*_{p-n} K_p  I(p)                              
-!              sum_p K*_p K_{p+n}  uI(p)        
-               call compute_bessel_contribution(K_R, fermiRB, ufermiRB, p_max, n, &
-                                             bessel_contributionR, ubessel_contributionR)
-               call compute_bessel_contribution(K_L, fermiLB, ufermiLB, p_max, n, &
-                                             bessel_contributionL, ubessel_contributionL)
-
-               level_v: do v=1,Ndim
-               level_l: do l=1, Ndim
-                    
-               GC (v,l,j,u,n_index) = 0.5* ( &
-                    LvlujaR(v,l) * bessel_contributionR - &
-                    LjulvaR(v,l) * ubessel_contributionR + &
-                    LvlujaL(v,l) * bessel_contributionL - &
-                    LjulvaL(v,l) * ubessel_contributionL) 
-                                     
-               enddo level_l
-               enddo level_v
-          enddo fourier_component
-     enddo level_u
-     enddo level_j
-         
-     return
-
-     end subroutine ratesC_bessel 
 !
 ! initial population for the propagation
 !
@@ -476,7 +314,7 @@ end subroutine rates_Bes
      real (q), intent (in):: Phase_seq (:) ! sequence of pulses
      real (q) :: effec_Amplitude
 ! Computed in ExtendedFermiIntegral
-     complex (qc) :: fermiR, fermiL, ufermiR, ufermiL
+     complex (qc), dimension(1) :: fermiR, fermiL, ufermiR, ufermiL
      complex (qc), allocatable:: fermiR_a(:,:,:), fermiL_a(:,:,:)
      complex (qc), allocatable:: ufermiR_a(:,:,:), ufermiL_a(:,:,:)
 ! internal
@@ -525,15 +363,13 @@ end subroutine rates_Bes
 ! I11 and I21 from the Manual are honored here:
      do j=1,Ndim
      do u=1,Ndim
-      call ExtendedFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, fermiR)
-      call ExtendedFermiIntegral ( Delta (j,u), bias_L (n), Temperature, Cutoff, GammaC, N_int,  fermiL)
-      call ExtendeduFermiIntegral ( Delta (j,u), bias_R (n), Temperature, Cutoff, GammaC, N_int, ufermiR) 
-      call ExtendeduFermiIntegral ( Delta (j,u), bias_L (n), Temperature, Cutoff, GammaC, N_int,  ufermiL)
+      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_R(n), 0, Temperature, Cutoff, GammaC, N_int,  fermiR, ufermiR)
+      call ExtendedFermiIntegral ( Delta (j,u), 0._q, bias_L(n), 0, Temperature, Cutoff, GammaC, N_int,  fermiL, ufermiL)
 
-      fermiR_a(j,u,n) = fermiR  / pi_d !important pi factor, see Manual
-      fermiL_a(j,u,n) = fermiL  / pi_d
-      ufermiR_a(j,u,n) = ufermiR  / pi_d
-      ufermiL_a(j,u,n) = ufermiL  / pi_d
+      fermiR_a(j,u,n) = fermiR(1)  / pi_d !important pi factor, see Manual
+      fermiL_a(j,u,n) = fermiL(1) / pi_d
+      ufermiR_a(j,u,n) = ufermiR(1) / pi_d
+      ufermiL_a(j,u,n) = ufermiL(1) / pi_d
 
      enddo
      enddo
@@ -773,57 +609,8 @@ end subroutine rates_Bes
     end function
 
 ! Calculation of energy integration of rates involving the Fermi function
-      subroutine ExtendedFermiIntegral ( D, V, T, Cutoff, GammaC, N,  fermiA)
-      implicit none
-      real (q) :: D, V, T, Cutoff, GammaC
-      real (q) :: e, step_e
-      integer :: i, N
-      complex (qc):: fermiA
-!fermiA is Integral I11 of the Manual
-! Trapeze-integration (the best among the better)
 
-      step_e = 2*Cutoff/(N-1)
-      e= -Cutoff
-      fermiA=0.5*Fermi (e-V, T) / (e-D+ui*GammaC)
-      
-      do i = 2, N-1
-      e= -Cutoff + (i-1)*step_e
-      fermiA=fermiA+Fermi (e-V, T) / (e-D+ui*GammaC)
-      enddo
-      e = Cutoff
-      fermiA=fermiA+0.5*Fermi (e-V, T) / (e-D+ui*GammaC)
-
-      fermiA = step_e*ui*fermiA
-
-      return
-      end subroutine ExtendedFermiIntegral
-! Calculation of energy integration of rates involving 1-Fermi function
-      subroutine ExtendeduFermiIntegral ( D, V,  T, Cutoff, GammaC, N, ufermiA)
-      implicit none
-      real (q) :: D, V, T, Cutoff, GammaC
-      real (q) :: e, step_e
-      integer :: i, N
-      complex (qc):: ufermiA
-!ufermiA is Integral I21 of the Manual
-! Trapeze-integration (the best among the better)
-
-      step_e = 2*Cutoff/(N-1)
-      e= -Cutoff 
-      ufermiA=0.5*(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
-
-      do i = 2, N-1
-      e= -Cutoff + (i-1)*step_e
-      ufermiA=ufermiA+(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
-      enddo
-      e = Cutoff
-      ufermiA=ufermiA+0.5*(1-Fermi (e-V, T)) / (e+D-ui*GammaC)
-
-      ufermiA = -step_e*ui*ufermiA
-
-      return
-      end subroutine ExtendeduFermiIntegral
-
-    subroutine ExtendedFermiIntegralBessel ( D, frequency, V, p_max, T, Cutoff, GammaC, N,  fermiA, ufermiA)
+    subroutine ExtendedFermiIntegral ( D, frequency, V, p_max, T, Cutoff, GammaC, N,  fermiA, ufermiA)
      implicit none
      real (q) :: D, V, T, Cutoff, GammaC, frequency
      real (q) :: e, step_e
@@ -875,7 +662,7 @@ end subroutine rates_Bes
      enddo ploop
 
      return
-     end subroutine ExtendedFermiIntegralBessel
+     end subroutine ExtendedFermiIntegral
 
      function Bessel_K(z, Amplitude, p_max) result (K)
      implicit none
