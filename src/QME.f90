@@ -479,12 +479,16 @@ end subroutine rates_Bes
 
     subroutine ExtendedFermiIntegral ( D, frequency, V, p_max, T, Cutoff, GammaC, N,  fermiA, ufermiA)
      implicit none
-     real (q) :: D, V, T, Cutoff, GammaC, frequency
+     
+     integer, intent(in) :: N, p_max
+     real (q), intent(in) :: D, V, T, Cutoff, GammaC, frequency
+     complex (qc), intent(out), dimension(2*p_max+1):: fermiA, ufermiA
+
      real (q) :: e, step_e
-     integer :: i, N, p, p_max, p_ind
-     complex (qc), dimension(2*p_max+1):: fermiA, ufermiA
      real (q), dimension(N) :: f
      complex (qc) :: denom, udenom
+     integer :: i, p, p_ind
+     
      ! I11_p = i/pi \int_{-Cutoff}^{Cutoff} dE f(E,V)/(E-D+p*frequency+ui\Gamma_C)
      ! I21_p = -i/pi \int_{-Cutoff}^{Cutoff} dE (1-f(E,V))/(E+D+p*frequency-ui\Gamma_C)
      ! f(E,V) = \frac{1}{\exp(\beta (E-V)) + 1} Fermi distribution with V as fermi level
@@ -523,11 +527,11 @@ end subroutine rates_Bes
           fermiA(p_ind) = fermiA(p_ind) + 0.5*f(N)/(e+denom)
           ufermiA(p_ind) = ufermiA(p_ind) + 0.5*(1-f(N))/(e+udenom)
 
-          fermiA(p_ind) = step_e*ui*fermiA(p_ind)/pi_d
-          ufermiA(p_ind) = -step_e*ui*ufermiA(p_ind)/pi_d
-
      enddo ploop
-
+     
+     fermiA  =  step_e*ui*fermiA/pi_d
+     ufermiA = -step_e*ui*ufermiA/pi_d
+     
      return
      end subroutine ExtendedFermiIntegral
 
@@ -551,6 +555,7 @@ end subroutine rates_Bes
           
      return
      end function Bessel_K
+     
 
      subroutine Orbital_overlaps (lambda, j, u, g_up, g_dn, Ndim, overlapvluj, overlapjulv)
      implicit none
